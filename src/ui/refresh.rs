@@ -116,7 +116,10 @@ pub(super) struct Reach {
     voice: bool,
     /// Pictures arrived, which can show anywhere.
     pictures: bool,
-    /// The video or voice message playing changed.    video: bool,
+    /// The video or voice message playing changed.
+    video: bool,
+    /// A picker's tile picture changed.
+    picker: bool,
     pub(super) everything: bool,
 }
 
@@ -125,6 +128,7 @@ impl Reach {
         composer: true,
         voice: true,
         pictures: true,
+        picker: true,
         video: true,
         everything: true,
     };
@@ -150,6 +154,10 @@ impl Reach {
                 video: true,
                 ..Self::default()
             },
+            Event::GifPicture { .. } | Event::StickerPicture { .. } => Self {
+                picker: true,
+                ..Self::default()
+            },
             _ => Self::EVERYTHING,
         }
     }
@@ -159,6 +167,7 @@ impl Reach {
             composer: self.composer || other.composer,
             voice: self.voice || other.voice,
             pictures: self.pictures || other.pictures,
+            picker: self.picker || other.picker,
             video: self.video || other.video,
             everything: self.everything || other.everything,
         }
@@ -353,6 +362,15 @@ impl Adapter {
                     }
                 });
         }
+        if reach.picker && !self.picker_due.running() {
+            let (adapter, weak) = (self.weak.clone(), window.as_weak());
+            self.picker_due
+                .start(slint::TimerMode::SingleShot, PICTURE_BATCH, move || {
+                    if let (Some(adapter), Some(window)) = (adapter.upgrade(), weak.upgrade()) {
+                        adapter.borrow_mut().show_picker_pictures(&window);
+                    }
+                });
+        }
         if reach.composer {
             self.show_composer(window);
             self.show_aside(window);
@@ -364,6 +382,13 @@ impl Adapter {
             self.show_video(window);
             self.show_voice_message(window);
         }
+    }
+
+    /// The pictures a picker's tiles draw that arrived since, and nothing
+    /// else: they change no layout, so no row is built again.
+    fn show_picker_pictures(&mut self, window: &YapfastWindow) {
+        self.show_gifs(window);
+        self.show_stickers(window);
     }
 
     pub(super) fn refresh(&mut self, window: &YapfastWindow) {
@@ -411,6 +436,9 @@ impl Adapter {
         self.show_dialogs(window);
         self.show_reactions(window);
         self.show_gifs(window);
+
+        self.show_sticker_card(window);
+        self.show_stickers(window);
         self.show_composer(window);
         self.show_messages(window, &changes);
         self.show_aside(window);
@@ -441,6 +469,39 @@ impl Adapter {
             self.layout.reactions = self.app.reaction_uses().clone();
             self.layout.write(&self.root);
         }
+        // The stickers sent, for Frequently Used at the next start.
+        let uses: Vec<KeptStickerUse> = self
+            .app
+            .sticker_uses()
+            .iter()
+            .map(|used| KeptStickerUse {
+                id: used.sticker.id.clone(),
+                name: used.sticker.name.clone(),
+                format: used.sticker.format,
+                picture: used.sticker.picture.clone(),
+                uses: used.uses,
+            })
+            .collect();
+        if uses != self.layout.sticker_uses {
+            self.layout.sticker_uses = uses;
+            self.layout.write(&self.root);
+        }
+        // The stickers kept, for Favorites at the next start.
+        let favorites: Vec<KeptSticker> = self
+            .app
+            .sticker_favorites()
+            .iter()
+            .map(|sticker| KeptSticker {
+                id: sticker.id.clone(),
+                name: sticker.name.clone(),
+                format: sticker.format,
+                picture: sticker.picture.clone(),
+            })
+            .collect();
+        if favorites != self.layout.sticker_favorites {
+            self.layout.sticker_favorites = favorites;
+            self.layout.write(&self.root);
+        }
         if changes.selection && !state.preview && state.account.is_some() {
             let mut layout = self.layout.clone();
             layout.channels.extend(self.app.last_channels());
@@ -449,6 +510,18 @@ impl Adapter {
                 self.layout = layout;
             }
         }
+    }
+
+    /// The card a clicked sticker opened, as the message and the picker's
+    /// lists show it.
+    fn show_sticker_card(&mut self, window: &YapfastWindow) {
+        let Some((item, index)) = self.sticker_card.clone() else {
+            return;
+        };
+        if !window.get_sticker_card_open() {
+            return;
+        }
+        window.set_sticker_card(messages::sticker_card(&self.app, &item, index));
     }
 
     /// Whether Yapfast is signed in or previewing, what the account is doing, and

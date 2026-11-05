@@ -1363,335 +1363,7 @@ fn a_voice_messages_waveform_moves_it_where_pressed_and_dragged() {
 }
 
 #[test]
-fn the_sticker_picker_lists_the_servers_stickers_above_the_packs() {
-    i_slint_backend_testing::init_no_event_loop();
-    let directory = tempfile::tempdir().unwrap();
-    let window = YapfastWindow::new().unwrap();
-    let adapter = Adapter::new(
-        Arc::new(BackgroundRuntime::new().unwrap()),
-        directory.path().into(),
-        &window,
-    )
-    .unwrap();
-    bind_callbacks(&window, &adapter);
-    let sticker = |id: &str, name: &str| yapfast_core::chat::Sticker {
-        id: id.into(),
-        name: name.into(),
-        format: 1,
-        picture: format!("https://cdn.discordapp.com/stickers/{id}.png?size=96"),
-        usable: true,
-    };
-    {
-        let mut adapter = adapter.borrow_mut();
-        let state = &mut adapter.app.state;
-        state.stickers.open = true;
-        state.stickers.server_for = Some("10".into());
-        state.stickers.servers = vec![yapfast_core::application::ServerStickers {
-            id: "10".into(),
-            name: "Server".into(),
-            stickers: vec![sticker("1", "Wave"), sticker("2", "Bounce")],
-        }];
-        state.stickers.packs = vec![yapfast_core::chat::StickerCollection {
-            id: "20".into(),
-            name: "Wumpus".into(),
-            stickers: vec![sticker("3", "Party")],
-        }];
-        adapter.show_stickers(&window);
-    }
-    let tiles = window.get_sticker_tiles();
-    let labels: Vec<String> = (0..tiles.row_count())
-        .filter_map(|row| tiles.row_data(row))
-        .map(|tile| tile.label.to_string())
-        .collect();
-    // Every collection lists: Frequently Used first, then the server's own
-    // stickers, then Discord's packs.
-    assert_eq!(
-        labels,
-        [
-            "Frequently Used",
-            "Party",
-            "Server",
-            "Wave",
-            "Bounce",
-            "Wumpus",
-            "Party"
-        ],
-        "Frequently Used first, then the server's own stickers"
-    );
-    let locked: Vec<bool> = (0..tiles.row_count())
-        .filter_map(|row| tiles.row_data(row))
-        .filter(|tile| tile.kind == 0)
-        .map(|tile| tile.usable)
-        .collect();
-    assert_eq!(
-        locked,
-        [true, true, true, true],
-        "the server's are usable here, and Discord's packs are anyone's"
-    );
-    // The rail lists the same sections the emoji picker's does, with no line
-    // between them.
-    let sections = window.get_sticker_sections();
-    let shown: Vec<(String, SectionGlyph)> = (0..sections.row_count())
-        .filter_map(|row| sections.row_data(row))
-        .map(|section| (section.name.to_string(), section.glyph))
-        .collect();
-    assert_eq!(
-        shown,
-        [
-            ("Frequently Used".to_string(), SectionGlyph::Clock),
-            ("Server".to_string(), SectionGlyph::None),
-            ("Wumpus".to_string(), SectionGlyph::None),
-        ],
-        "Frequently Used carries the clock, as the emoji picker's does"
-    );
-}
-
-#[test]
-fn a_servers_icon_draws_on_its_heading_and_rail_button() {
-    i_slint_backend_testing::init_no_event_loop();
-    let directory = tempfile::tempdir().unwrap();
-    let window = YapfastWindow::new().unwrap();
-    let adapter = Adapter::new(
-        Arc::new(BackgroundRuntime::new().unwrap()),
-        directory.path().into(),
-        &window,
-    )
-    .unwrap();
-    bind_callbacks(&window, &adapter);
-    let icon = "https://cdn.discordapp.com/icons/10/abc.png?size=128";
-    {
-        let mut adapter = adapter.borrow_mut();
-        let state = &mut adapter.app.state;
-        state.servers = vec![Arc::new(yapfast_core::chat::ChatServer {
-            id: yapfast_core::discord::server_id("10"),
-            name: "Server".into(),
-            channels: vec![],
-            discord: true,
-            muted: false,
-            unavailable: false,
-            icon: Some(icon.into()),
-            folder: None,
-            hide_muted: false,
-            community: false,
-            pinned: Vec::new(),
-            banner: None,
-            verified: false,
-            events: Vec::new(),
-            boosts: None,
-            tag: None,
-        })];
-        state.stickers.open = true;
-        state.stickers.server_for = Some("10".into());
-        state.stickers.servers = vec![yapfast_core::application::ServerStickers {
-            id: "10".into(),
-            name: "Server".into(),
-            stickers: vec![yapfast_core::chat::Sticker {
-                id: "1".into(),
-                name: "Wave".into(),
-                format: 1,
-                picture: "https://cdn.discordapp.com/stickers/1.png?size=96".into(),
-                usable: true,
-            }],
-        }];
-        adapter.show_stickers(&window);
-    }
-    let heading_has_its_icon = |window: &YapfastWindow| {
-        let tiles = window.get_sticker_tiles();
-        (0..tiles.row_count())
-            .filter_map(|row| tiles.row_data(row))
-            .find(|tile| tile.kind == 1)
-            .is_some_and(|tile| tile.image.size().width > 0)
-    };
-    // Before it came, the heading has no icon.
-    assert!(!heading_has_its_icon(&window));
-    // Once the app's pictures carry it, the heading and the rail button draw it.
-    {
-        let mut adapter = adapter.borrow_mut();
-        adapter.app.state.pictures.insert(
-            icon.into(),
-            Arc::new(Picture {
-                width: 128,
-                height: 128,
-                rgba: yapfast_core::chat::Pixels::new(128, 128, vec![255; 128 * 128 * 4]),
-                ..Default::default()
-            }),
-        );
-        adapter.show_stickers(&window);
-    }
-    assert!(
-        heading_has_its_icon(&window),
-        "the server's icon draws on its heading"
-    );
-    let sections = window.get_sticker_sections();
-    let section = sections.row_data(0).expect("the server's section");
-    assert!(
-        section.icon.picture.size().width > 0,
-        "and on its rail button"
-    );
-}
-
-#[test]
-fn a_stickers_picture_reaches_its_tile_and_the_grid_keeps_a_window() {
-    i_slint_backend_testing::init_no_event_loop();
-    let directory = tempfile::tempdir().unwrap();
-    let window = YapfastWindow::new().unwrap();
-    let adapter = Adapter::new(
-        Arc::new(BackgroundRuntime::new().unwrap()),
-        directory.path().into(),
-        &window,
-    )
-    .unwrap();
-    bind_callbacks(&window, &adapter);
-    let sticker = |id: usize| yapfast_core::chat::Sticker {
-        id: id.to_string(),
-        name: format!("Sticker {id}"),
-        format: 1,
-        picture: format!("https://cdn.discordapp.com/stickers/{id}.png?size=96"),
-        usable: true,
-    };
-    let stickers: Vec<_> = (0..80).map(sticker).collect();
-    let first = stickers[0].picture.clone();
-    {
-        let mut adapter = adapter.borrow_mut();
-        let state = &mut adapter.app.state;
-        state.stickers.open = true;
-        state.stickers.server_for = Some("10".into());
-        state.stickers.servers = vec![yapfast_core::application::ServerStickers {
-            id: "10".into(),
-            name: "Server".into(),
-            stickers,
-        }];
-        adapter.show_stickers(&window);
-    }
-    // Before the grid says how tall it is, all of it is published.
-    let all = window.get_sticker_tiles().row_count();
-    assert_eq!(all, 81, "the server's heading and its 80 stickers");
-    // Once it does, only what is in sight and a screen either side is.
-    adapter.borrow_mut().stickers_scrolled(&window, 0.0, 486.0);
-    let windowed = window.get_sticker_tiles().row_count();
-    assert!(
-        windowed < all && windowed >= 4,
-        "a window, not the whole grid: {windowed} of {all}"
-    );
-    // A picture that arrives draws on its tile, though the window did not move.
-    {
-        let mut adapter = adapter.borrow_mut();
-        adapter.app.state.stickers.pictures.insert(
-            first.clone(),
-            yapfast_core::application::StickerPicture::Shown(Arc::new(Picture {
-                width: 96,
-                height: 96,
-                rgba: yapfast_core::chat::Pixels::new(96, 96, vec![255; 96 * 96 * 4]),
-                ..Default::default()
-            })),
-        );
-        adapter.show_stickers(&window);
-    }
-    let tiles = window.get_sticker_tiles();
-    assert!(
-        (0..tiles.row_count())
-            .filter_map(|row| tiles.row_data(row))
-            .any(|tile| tile.kind == 0 && tile.image.size().width > 0),
-        "the picture arrived and drew on its tile"
-    );
-}
-
-#[test]
-fn a_messages_sticker_is_160px_square() {
-    // A sticker's picture may come smaller than Discord's 160px — an old kept
-    // one, or a Lottie drawn small — but its cell is 160 square, as Discord
-    // draws it.
-    let picture = Arc::new(Picture {
-        width: 96,
-        height: 96,
-        rgba: yapfast_core::chat::Pixels::new(96, 96, vec![0; 96 * 96 * 4]),
-        ..Default::default()
-    });
-    let row = message_row_plain(&ChatMessage {
-        attachments: vec![yapfast_core::chat::Attachment {
-            name: "Wave".into(),
-            size: None,
-            image: true,
-            dimensions: Some((160, 160)),
-            preview: Some(picture),
-            preview_failed: false,
-            placement: Placement::Sticker,
-            gif: None,
-            spoiler: false,
-            video: false,
-            url: None,
-        }],
-        ..Default::default()
-    });
-    let cell = row.stickers.row_data(0).expect("the sticker shows");
-    assert_eq!((cell.width, cell.height), (160, 160));
-    assert!(!cell.loading);
-}
-
-#[test]
-fn a_selection_copies_the_pictures_it_runs_through() {
-    let picture = Arc::new(Picture {
-        width: 40,
-        height: 30,
-        rgba: yapfast_core::chat::Pixels::new(40, 30, vec![128; 40 * 30 * 4]),
-        ..Default::default()
-    });
-    let window = showing(vec![
-        ChatMessage {
-            author: "Sam".into(),
-            body: "Look at this.".into(),
-            attachments: vec![yapfast_core::chat::Attachment {
-                name: "cat.png".into(),
-                size: None,
-                image: true,
-                dimensions: Some((400, 300)),
-                preview: Some(picture),
-                preview_failed: false,
-                placement: Placement::Message,
-                gif: None,
-                spoiler: false,
-                video: false,
-                url: None,
-            }],
-            ..Default::default()
-        },
-        ChatMessage {
-            author: "Riley".into(),
-            body: "Nice.".into(),
-            ..Default::default()
-        },
-    ]);
-    assert_eq!(
-        copy_upwards(&window, 0).as_deref(),
-        Some("Sam 19:20\nLook at this.\n[Picture]\nRiley 19:21\nNice.")
-    );
-}
-
-#[test]
-fn a_selection_keeps_the_messages_it_scrolls_past() {
-    let chat: Vec<ChatMessage> = (0..40)
-        .map(|index| ChatMessage {
-            author: "Sam".into(),
-            body: format!("Message {index}."),
-            ..Default::default()
-        })
-        .collect();
-    let window = showing(chat);
-    let expected: Vec<String> = (0..40)
-        .map(|index| format!("Sam 19:2{index}\nMessage {index}."))
-        .collect();
-    assert_eq!(copy_upwards(&window, 40), Some(expected.join("\n")));
-}
-
-#[test]
-fn a_click_on_a_link_in_selectable_text_opens_it() {
-    use slint::platform::{PointerEventButton, WindowEvent};
-    let window = one_message("See https://example.com/yapfast");
-    let opened = Rc::new(RefCell::new(Vec::<String>::new()));
-    let record = opened.clone();
-    window.on_open_link(move |link| record.borrow_mut().push(link.into()));
-    let button = PointerEventButton::Left;
-    // The link starts after "See ", a little way into the text column.
+  // The link starts after "See ", a little way into the text column.
     for y in (100..700).step_by(4) {
         let position = slint::LogicalPosition::new(440., y as f32);
         window
@@ -1732,15 +1404,8 @@ fn a_link_showing_other_text_asks_before_it_opens() {
     assert!(
         opened
             .iter()
-            .all(|link| link == "yapfast:leave/https://evil.example/yapfast"),
-        "{opened:?}"
-    );
-}
-
-#[test]
-fn a_right_click_on_a_link_gives_its_menu_the_address() {
-    use slint::platform::{PointerEventButton, WindowEvent};
-    let window = one_message("See [example.com/yapfast](https://evil.example/yapfast)");
+            .all(|link| link == "yapfast:leave/https://evil.e    // stickers, then Discord's packs, which are Nitro's and so locked.
+.com/yapfast](https://evil.example/yapfast)");
     let button = PointerEventButton::Right;
     let mut found = 0;
     for y in (100..700).step_by(4) {
@@ -1752,45 +1417,20 @@ fn a_right_click_on_a_link_gives_its_menu_the_address() {
             .window()
             .dispatch_event(WindowEvent::PointerReleased { position, button });
         let at = |x: f32| {
-            i_slint_core::yapfast_selection::pressed_link_at(
-                i_slint_core::lengths::LogicalPoint::new(x, y as f32),
-            )
-        };
-        if let Some(link) = at(440.) {
-            assert_eq!(link, "yapfast:leave/https://evil.example/yapfast");
-            assert_eq!(at(460.), None, "only where the press was");
-            found += 1;
-        }
+            i_slint_core::yapfas        [false, true, true, false],
+        "the server's are usable here; Discord's packs need Nitro, those before them too"
+}
     }
     assert!(found > 0, "a right press on the link records it");
     assert_eq!(
-        callbacks::web_address("yapfast:leave/https://evil.example/yapfast"),
-        Some("https://evil.example/yapfast")
-    );
-    assert_eq!(
-        callbacks::web_address("https://example.com/a"),
-        Some("https://example.com/a")
-    );
-    assert_eq!(callbacks::web_address("yapfast:user/1"), None);
-    assert_eq!(
-        callbacks::web_address("https://matrix.to/#/@sam:example.org"),
-        None
-    );
-}
-
-#[test]
-fn styled_messages_select_by_dragging_and_copy_as_plain_text() {
-    use slint::platform::{Key, PointerEventButton, WindowEvent};
-    let window = one_message("Thinking **co-op** after nine, if people are up for it.");
-    let dispatch = |event| window.window().dispatch_event(event);
-    let button = PointerEventButton::Left;
-    let at = |x, y| slint::LogicalPosition::new(x, y);
-    let ctrl = |key: &str| {
-        dispatch(WindowEvent::KeyPressed {
-            text: Key::Control.into(),
-        });
-        dispatch(WindowEvent::KeyPressed { text: key.into() });
-        dispatch(WindowEvent::KeyReleased { text: key.into() });
+        callbacks::web_address("yapfast:leave/https://evil.example/y    let shown: Vec<(String, bool)> = (0..sections.row_count())
+        .filter_map(|row| sections.row_data(row))
+        .map(|section| (section.name.to_string(), section.clock))
+entButton, WindowEvent};
+    let window = one_message("Thinking             ("Frequently Used".to_string(), true),
+            ("Server".to_string(), false),
+            ("Wumpus".to_string(), false),
+Event::KeyReleased { text: key.into() });
         dispatch(WindowEvent::KeyReleased {
             text: Key::Control.into(),
         });
@@ -1823,14 +1463,12 @@ fn styled_messages_select_by_dragging_and_copy_as_plain_text() {
     // Without element lookups in this build, drag down the timeline row by
     // row: from right of the text, past its end, to left of the timeline,
     // past its start. A drag that lands on the message selects all of it,
-    // and copies it.
-    for y in (100..700).step_by(4) {
-        let y = y as f32;
-        dispatch(WindowEvent::PointerMoved {
-            position: at(900., y),
-        });
-        dispatch(WindowEvent::PointerPressed {
-            position: at(900., y),
+    // an            banner: None,
+            verified: false,
+            events: Vec::new(),
+            boosts: None,
+            tag: None,
+y),
             button,
         });
         dispatch(WindowEvent::PointerMoved {

@@ -24,10 +24,10 @@ import "fonts/AtkinsonHyperlegibleNext-ExtraBold.ttf";
 import { Theme, Tip, ReactionHover, Middle, Popup, PopupMotion } from "theme.slint";
 import { TitleBar, ResizeEdges } from "title_bar.slint";
 import { GifPicker, GifTile, PickerTab } from "gifs.slint";
+import { StickerPicker, StickerGridTile } from "stickers.slint";
 import { ActionButton, IconButton, PingToggle, DeviceToggle, Avatar, TextField, MessagesSkeleton, ContextMenu, MenuItem, MenuRow, QuickDeviceMenu, HeaderToggle, Banner, StatusText, PictureStore } from "controls.slint";
 import { VoicePlayer } from "messages.slint";
-import { RoomList, VoiceCardView } from "rail.slint";
-import { RequestRow, FriendRow, FriendsScreen, HeaderTab, RequestsScreen, AddFriendDialog } from "friends.slint";
+import { RoomList, VoiceCardView } from "rail.slint";import { RequestRow, FriendRow, FriendsScreen, HeaderTab, RequestsScreen, AddFriendDialog } from "friends.slint";
 import { ContactRow, PlaceRow, ReactionPill, ReactorRow, StatusDialog, NewDmDialog, ForwardDialog, QuickSwitcher, ReactionsDialog, StatusMenu, PersonPrompt, PersonDialog, LeavingDialog, PollAnswerDraft, PollDialog } from "dialogs.slint";
 import { InvitePrompt, InviteDialog, JoinPrompt, JoinDialog, EventPrompt, EventDialog, GiftPrompt, GiftDialog, OAuthPrompt, OAuthDialog, ChannelPrompt, ChannelDialog, ProfileEditorPrompt, ProfileEditorDialog } from "server.slint";
 import { SignInScreen, VerifyBanner } from "sign-in.slint";
@@ -48,7 +48,7 @@ export { PersonRow, CallLink, ShareScreen, VoiceCard } from "voice.slint";
 export { ServerRow, RoomRow, FolderServer } from "rail.slint";
 export { PictureStore, Motion, ActivityClock } from "controls.slint";
 export { StagedFile, MentionRow } from "composer.slint";
-export { EmojiCell, EmojiRow, EmojiSection, ReactionChip, ImageCell, FileCell, EmbedField, EmbedFieldRow, EmbedCard, CardButtonStyle, CardButton, TextBlock, CardRowKind, CardRow, ComponentCard, MessageRow, VideoPlayer, PollAction, PollAnswerRow, PollCard, Polls, VoicePlayer } from "messages.slint";
+export { EmojiCell, EmojiRow, EmojiSection, RailSection, EmojiFavorites, MessageStickerCard, MessageStickerCardView, ReactionChip, ImageCell, FileCell, EmbedField, EmbedFieldRow, EmbedCard, CardButtonStyle, CardButton, TextBlock, CardRowKind, CardRow, ComponentCard, MessageRow, VideoPlayer, PollAction, PollAnswerRow, PollCard, Polls, VoicePlayer } from "messages.slint";
 export { MemberRow, ProfileRole, ProfileRoleRow, ProfileServerRow, ProfileFriendRow, ProfileData, ActivityRow } from "people.slint";
 export { RequestRow, FriendRow } from "friends.slint";
 export { ContactRow, PlaceRow, ReactionPill, ReactorRow, PollAnswerDraft } from "dialogs.slint";
@@ -472,6 +472,34 @@ export component YapfastWindow inherits Window {
     callback insert-emoji(string);
     /// The GIF picker, in the picker above the composer; see GifPicker.
     in property <bool> can-pick-gifs;
+    /// The sticker picker beside it; see StickerPicker.
+    in property <bool> can-pick-stickers;
+    in property <[StickerGridTile]> sticker-tiles;
+    /// The collections down the picker's left, which its rail jumps to.
+    in property <[RailSection]> sticker-sections;
+    /// The collections down the emoji picker's left, which its rail jumps to.
+    in property <[RailSection]> emoji-rail-sections;
+    /// The sticker picker's search field.
+    in-out property <string> sticker-query;
+    /// The first sticker the search shows, which Enter picks.
+    in property <string> sticker-first-id;
+    callback sticker-search(string);
+    in property <length> sticker-grid-height;
+    in property <string> sticker-note;
+    /// The width the grid shows at: the picker's, less its rail and 12px
+    /// either side.
+    out property <length> sticker-grid-width: root.picker-shown - 72px;
+    // The grid's columns follow the width it shows at, as the GIFs' do, so a
+    // drag re-places its tiles.
+    changed sticker-grid-width => { root.sticker-reflow(); }
+    callback open-stickers;
+    callback close-stickers;
+    callback sticker-pick(string);
+    callback sticker-favorite(string);
+    /// An emoji's star was pressed: keep it among the favorites, or let it go.
+    callback emoji-favorite(string);
+    callback stickers-scrolled(length, length);
+    callback sticker-reflow;
     in property <int> gif-view;
     in-out property <string> gif-query;
     in property <[GifTile]> gif-tiles;
@@ -635,6 +663,11 @@ export component YapfastWindow inherits Window {
     }
     callback enlarge-profile();
     callback close-profile();
+    /// A sticker's card, open over the window as an emoji's is.
+    in-out property <bool> sticker-card-open;
+    in property <MessageStickerCard> sticker-card;
+    /// A sticker in a message was clicked: its card opens.
+    callback open-sticker(string, int);
     /// Send someone a message in their DM from their card: who, and what.
     callback message-from-profile(string, string);
     in property <bool> viewer-open;
@@ -1886,8 +1919,8 @@ export component YapfastWindow inherits Window {
         emoji-picker.close();
         expressions.close();
     }
-    // The picker above the composer: GIFs, and the emoji. Its GIFs let go of
-    // their pictures when it closes or shows the emoji.
+    // The picker above the composer: the GIFs, the emoji and the stickers.
+    // Each lets go of its pictures when it closes or another shows.
     property <int> expression-tab;
     function open-expressions(tab: int) {
         root.react-item = "yapfast:composer";
@@ -1897,24 +1930,27 @@ export component YapfastWindow inherits Window {
         root.emoji-panel-width = root.picker-shown;
         root.emoji-search("");
         if tab == 0 { root.open-gifs(); }
+        if tab == 2 { root.open-stickers(); }
         expressions.show();
     }
     function show-expression-tab(tab: int) {
         if tab == root.expression-tab { return; }
         root.expression-tab = tab;
-        // The emoji's columns follow the width the picker was dragged to while
-        // the GIFs showed.
-        if tab == 0 { root.open-gifs(); } else {
-            root.close-gifs();
+        // Every grid's columns follow the width the picker was dragged to
+        // while another tab showed.
+        if tab == 0 { root.open-gifs(); } else { root.close-gifs(); }
+        if tab == 1 {
             root.emoji-panel-width = root.picker-shown;
             root.emoji-reflow();
         }
+        if tab == 2 { root.open-stickers(); } else { root.close-stickers(); }
     }
     property <bool> expressions-open: expressions.is-open;
     changed expressions-open => {
         if !root.expressions-open {
             root.close-gifs();
             if !root.picker-open { root.emoji-picker-closed(); }
+            root.close-stickers();
             root.focus-composer();
             root.react-item = "";
         }
@@ -1952,6 +1988,7 @@ export component YapfastWindow inherits Window {
                     padding-left: 16px; spacing: 8px; alignment: start;
                     PickerTab { text: "GIFs"; selected: root.expression-tab == 0; clicked => { root.show-expression-tab(0); } }
                     PickerTab { text: "Emoji"; selected: root.expression-tab == 1; clicked => { root.show-expression-tab(1); } }
+                    PickerTab { text: "Stickers"; selected: root.expression-tab == 2; clicked => { root.show-expression-tab(2); } }
                 }
                 if root.expression-tab == 0: GifPicker {
                     view: root.gif-view; query <=> root.gif-query; tiles: root.gif-tiles;
@@ -1966,11 +2003,25 @@ export component YapfastWindow inherits Window {
                     resized => { root.gif-picker-resized(); }
                     close => { expressions.close(); }
                 }
+                if root.expression-tab == 2: StickerPicker {
+                    bare: true;
+                    tiles: root.sticker-tiles; sections: root.sticker-sections; font: root.emoji-font;
+                    grid-height: root.sticker-grid-height; note: root.sticker-note;
+                    query <=> root.sticker-query; first-id: root.sticker-first-id;
+                    search(text) => { root.sticker-search(text); }
+                    pick(id) => { root.sticker-pick(id); expressions.close(); }
+                    favorite(id) => { root.sticker-favorite(id); }
+                    unlock-nitro => { root.unlock-nitro(); }
+                    scrolled-to(top, height) => { root.stickers-scrolled(top, height); }
+                    close => { expressions.close(); }
+                }
                 if root.expression-tab == 1: EmojiPicker {
                     bare: true;
-                    emoji-rows: root.emoji-rows; emoji-sections: root.emoji-sections; emoji-query <=> root.emoji-query; emoji-hover <=> root.emoji-hover;
+                    emoji-rows: root.emoji-rows; emoji-sections: root.emoji-sections; rail-sections: root.emoji-rail-sections;
+                    emoji-query <=> root.emoji-query; emoji-hover <=> root.emoji-hover;
                     emoji-font: root.emoji-font; react-item: root.react-item; columns: root.emoji-columns;
                     emoji-search(text) => { root.emoji-search(text); }
+                    favorite(key) => { root.emoji-favorite(key); }
                     pick(cell) => { root.pick(cell); }
                     unlock-nitro => { root.unlock-nitro(); }
                     close-picker => { expressions.close(); }
@@ -2887,6 +2938,10 @@ export component YapfastWindow inherits Window {
                                                         cancel-send(item) => { root.cancel-send(item); }
                                                         reveal-attachment(id, index) => { root.reveal-attachment(id, index); }
                                                         view-image(id, index) => { root.view-image(id, index); }
+                                                        open-sticker(item, index, x, y, width, height) => {
+                                                            root.anchor(x, y, width, height, false);
+                                                            root.open-sticker(item, index);
+                                                        }
                                                         save-attachment(id, index) => { root.save-attachment(id, index); }
                                                         // A right click on a picture opens the message's menu with it.
                                                         media-menu(id, index, video, x, y) => {
@@ -3144,7 +3199,8 @@ export component YapfastWindow inherits Window {
                                                 }
                                             }
                                         }
-                                        // As Discord's: the GIFs, then the emoji, in one picker.
+                                        // As Discord's: the GIFs, the stickers, then the emoji,
+                                        // in one picker.
                                         if root.can-pick-gifs: VerticalLayout {
                                             alignment: end; padding-bottom: 8px;
                                             gif-button := IconButton {
@@ -3154,6 +3210,18 @@ export component YapfastWindow inherits Window {
                                                 clicked => {
                                                     root.anchor(emoji-button.absolute-position.x, emoji-button.absolute-position.y, emoji-button.width, emoji-button.height, false);
                                                     root.open-expressions(0);
+                                                }
+                                            }
+                                        }
+                                        if root.can-pick-stickers: VerticalLayout {
+                                            alignment: end; padding-bottom: 8px;
+                                            sticker-button := IconButton {
+                                                icon: @image-url("icons/sticker.svg"); label: "Open sticker picker";
+                                                glyph: 22px; enabled: root.composer-enabled;
+                                                tint: root.expressions-open && root.expression-tab == 2 ? Theme.text : Theme.secondary;
+                                                clicked => {
+                                                    root.anchor(emoji-button.absolute-position.x, emoji-button.absolute-position.y, emoji-button.width, emoji-button.height, false);
+                                                    root.open-expressions(2);
                                                 }
                                             }
                                         }
@@ -3265,6 +3333,10 @@ export component YapfastWindow inherits Window {
                         cancel-send(item) => { root.cancel-send(item); }
                         reveal-attachment(id, index) => { root.reveal-attachment(id, index); }
                         view-image(id, index) => { root.view-image(id, index); }
+                        open-sticker(item, index, x, y, width, height) => {
+                            root.anchor(x, y, width, height, false);
+                            root.open-sticker(item, index);
+                        }
                         save-attachment(id, index) => { root.save-attachment(id, index); }
                     }
                     if root.members-docked: MemberPanel {
@@ -3796,6 +3868,30 @@ export component YapfastWindow inherits Window {
                 root.server-card-open = false;
                 root.close-profile();
                 root.navigate-server(root.server-card.id);
+            }
+        }
+    }
+    // A sticker's card, under the sticker a message was clicked on, as an
+    // emoji's opens. A click outside or Escape closes it.
+    sticker-card-motion := PopupMotion { open: root.sticker-card-open; }
+    if sticker-card-motion.shown: Rectangle {
+        TouchArea { clicked => { root.sticker-card-open = false; } }
+        FocusScope {
+            init => { self.focus(); }
+            key-pressed(event) => {
+                if event.text == Key.Escape { root.sticker-card-open = false; return accept; }
+                return reject;
+            }
+        }
+        MessageStickerCardView {
+            opacity: Popup.opacity(sticker-card-motion.amount); transform-scale: Popup.scale(sticker-card-motion.amount);
+            x: max(8px, min(root.width - self.width - 8px, root.anchor-x));
+            y: root.anchor-y + root.anchor-height + 4px + self.height <= root.height - 8px
+                ? root.anchor-y + root.anchor-height + 4px : max(8px, root.anchor-y - self.height - 4px);
+            card: root.sticker-card;
+            open-server(server) => {
+                root.sticker-card-open = false;
+                root.navigate-server(server);
             }
         }
     }

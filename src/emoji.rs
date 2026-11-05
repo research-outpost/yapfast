@@ -50,6 +50,13 @@ pub const CELL: f32 = 56.0;
 /// The size a glyph is drawn at in that grid, as `EmojiPicker` in
 /// ui/messages.slint passes it.
 pub const GLYPH: f32 = 36.0;
+
+/// The height of a grid row, which the rail's sections are placed by.
+pub const ROW_HEIGHT: f32 = 56.0;
+
+/// The size the picker's rail draws its icons at, which the stickers' rail
+/// draws its own at too.
+pub const RAIL_GLYPH: f32 = 32.0;
 const BESIDE: f32 = 64.0;
 
 /// The emoji per row of a grid showing at `width`, which follows the picker's
@@ -313,11 +320,11 @@ pub fn suggestions(query: &str, custom: &[EmojiSet], limit: usize) -> Vec<EmojiC
 /// that has one, and its first emoji otherwise.
 pub fn rows(
     query: &str,
-    favorites: &[(String, bool)],
-    frequent: &[(String, bool)],
+    favorites: &[String],
+    frequent: &[String],
     custom: &[EmojiSet],
     columns: usize,
-    server_icon: impl Fn(&EmojiSet) -> Option<slint::Image>,
+    server_icon: impl Fn(&EmojiSet) -> Option<(String, slint::Image)>,
 ) -> (Vec<EmojiRow>, Vec<EmojiSection>) {
     let query = query.trim().trim_matches(':').to_lowercase();
     let available = || emojis::iter().filter(|emoji| emoji.unicode_version() <= NEWEST);
@@ -336,19 +343,20 @@ pub fn rows(
     let mut rows = Vec::new();
     let mut sections = Vec::new();
     // A section under a heading of its icon's name, or the matches, under none.
-    let mut section = |icon: Option<EmojiCell>, glyphs: Vec<(String, bool)>| {
+    let mut section = |icon: Option<(EmojiCell, String)>, glyphs: Vec<(String, bool)>| {
         if glyphs.is_empty() {
             return;
         }
-        if let Some(icon) = icon {
+        if let Some((icon, icon_url)) = icon {
             let row = rows.len();
             rows.push(EmojiRow {
-                heading: icon.name.to_uppercase().into(),
+                heading: icon.name.as_str().into(),
                 cells: ModelRc::default(),
             });
             sections.push(EmojiSection {
                 row: row as i32,
                 end: (row + 1 + glyphs.len().div_ceil(columns)) as i32,
+                icon_url: icon_url.into(),
                 icon,
             });
         }
@@ -373,6 +381,19 @@ pub fn rows(
         name: name.into(),
         ..cell(glyph)
     };
+    // The emoji this device keeps, under a star, first.
+    section(
+        Some((titled("⭐", "Favorites"), String::new())),
+        favorites
+            .iter()
+            .filter(|key| {
+                let name = cell(key).name.to_lowercase();
+                query.is_empty() || name.contains(&query)
+            })
+            .cloned()
+            .map(|key| (key, true))
+            .collect(),
+    );
     if !query.is_empty() {
         section(
             None,
@@ -392,8 +413,10 @@ pub fn rows(
         );
         return (rows, sections);
     }
-    section(Some(titled("⭐", "Favorites")), favorites.to_vec());
-    section(Some(titled("🕒", "Frequently used")), frequent.to_vec());
+    section(
+        Some((titled("🕒", "Frequently Used"), String::new())),
+        frequent.iter().map(|key| (key.clone(), true)).collect(),
+    );
     for (set, keys) in custom.iter().zip(custom_keys) {
         let Some((first_key, _)) = keys.first() else {
             continue;
@@ -401,11 +424,14 @@ pub fn rows(
         let first = cell(first_key);
         let icon = EmojiCell {
             name: set.server.as_str().into(),
-            picture: server_icon(set).unwrap_or(first.picture.clone()),
+            picture: server_icon(set)
+                .map(|(_, picture)| picture)
+                .unwrap_or_else(|| first.picture.clone()),
             usable: true,
             ..first
         };
-        section(Some(icon), keys);
+        let icon_url = set.icon.clone().unwrap_or_default();
+        section(Some((icon, icon_url)), keys);
     }
     for group in emojis::Group::iter() {
         let (glyph, name) = match group {
@@ -420,7 +446,7 @@ pub fn rows(
             emojis::Group::Flags => ("🏁", "Flags"),
         };
         section(
-            Some(titled(glyph, name)),
+            Some((titled(glyph, name), String::new())),
             group
                 .emojis()
                 .filter(|emoji| emoji.unicode_version() <= NEWEST)
@@ -707,18 +733,10 @@ mod tests {
 
     #[test]
     fn the_picker_lists_categories_or_matches_and_names_emoji() {
-        let (all, sections) = rows(
-            "",
-            &[("☠️".into(), true)],
-            &[("🔥".into(), true)],
-            &[],
-            columns(408.),
-            |_| None,
-        );
-        assert_eq!(all[0].heading, "FAVORITES");
-        assert_eq!(all[2].heading, "FREQUENTLY USED");
-        assert_eq!(all[3].cells.row_count(), 1);
-        assert_eq!(all[4].heading, "SMILEYS & EMOTION");
+        let (all, sections) = rows("", &[], &["🔥".into()], &[], columns(408.), |_| None);
+        assert_eq!(all[0].heading, "Frequently Used");
+        assert_eq!(all[1].cells.row_count(), 1);
+        assert_eq!(all[2].heading, "Smileys & emotion");
         assert!(all.iter().all(|row| row.cells.row_count() <= columns(408.)));
         // The sidebar jumps to each heading; a section ends where the next begins.
         assert_eq!(sections.len(), 2 + emojis::Group::iter().count());
@@ -757,8 +775,13 @@ mod tests {
             }],
         }];
         let icon = slint::Image::from_rgba8(slint::SharedPixelBuffer::new(3, 3));
-        let (all, sections) = rows("", &[], &[], &custom, columns(408.), |_| Some(icon.clone()));
-        assert_eq!(all[0].heading, "GAMES");
+        let (all, sections) = rows("", &[], &[], &custom, columns(408.), |_| {
+            Some((
+                "https://cdn.discordapp.com/icons/1/x.png".into(),
+                icon.clone(),
+            ))
+        });
+        assert_eq!(all[0].heading, "Games");
         let pog = all[1].cells.row_data(0).unwrap();
         assert_eq!((pog.glyph.as_str(), pog.key.as_str()), (":pog:", "pog:5"));
         assert_eq!(sections[0].icon.name, "Games");
