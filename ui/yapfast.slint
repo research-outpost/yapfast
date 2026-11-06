@@ -27,7 +27,7 @@ import { Theme, Tip, ReactionHover, Middle, Popup, PopupMotion , Badges } from "
 import { TitleBar, ResizeEdges } from "title_bar.slint";
 import { GifPicker, GifTile, PickerTab , GifFavorites } from "gifs.slint";
 import { ActionButton, IconButton, PingToggle, DeviceToggle, Avatar, TextField, MessagesSkeleton, ContextMenu, MenuItem, MenuRow, HeaderToggle, Banner, StatusText, QuickDeviceMenu, PictureStore , ActivityClock, Motion } from "controls.slint";
-import { PersonRow, CallLink, CallLinkCard, LinkTouch, SignalIcon, VoiceDock, StreamPip, CallInvite, JoinVoice, ParticipantGrid, CallControls, IncomingCall, SwitchDialog, InputLevel, ShareMenu, ShareScreen, VolumeMenu, Soundboard, SoundRow , VoiceCard } from "voice.slint";
+import { PersonRow, StreamRow, CallLink, CallLinkCard, LinkTouch, SignalIcon, VoiceDock, StreamPip, CallInvite, JoinVoice, ParticipantGrid, CallControls, IncomingCall, SwitchDialog, InputLevel, ShareMenu, ShareScreen, VolumeMenu, Soundboard, SoundRow , VoiceCard } from "voice.slint";
 import { ServerRow, RoomRow, StatusDot, ServerRail, ServerHeader, RoomList, VoiceCardView, ServerVoiceCard, ServerVoiceCardView , FolderServer } from "rail.slint";
 import { StagedFile, StagedTile, Composer, MentionRow, MentionList, EmojiSuggestions, RequestBar } from "composer.slint";
 import { EmojiCell, EmojiRow, EmojiSection, MessageRow, ReactionToggle, EmojiButton, EmojiPicker, MessageMenu, MessageGallery, MessageStickers, FileCard, MessageContent, EmbedView, BotTag, NoConversation, ConversationStart, HistoryEdge, UnreadBar, PresentBar, ImageViewer, VideoViewer, VideoPlayer, Polls, VoicePlayer , CardButton, CardButtonStyle, CardRow, CardRowKind, ComponentCard, EmbedCard, EmbedField, EmbedFieldRow, EmojiFavorites, FileCell, ImageCell, MessageStickerCard, MessageStickerCardView, PollAction, PollAnswerRow, PollCard, RailSection, ReactionChip, TextBlock } from "messages.slint";
@@ -52,7 +52,7 @@ import { StickerPicker, StickerGridTile } from "stickers.slint";
 export { Theme, Badges, Popup } from "theme.slint";
 export { BuildInfo, Updates, UpdateStatus } from "build-info.slint";
 export { Autoscroll } from "scrollview.slint";
-export { PersonRow, CallLink, ShareScreen, VoiceCard } from "voice.slint";
+export { PersonRow, StreamRow, CallLink, ShareScreen, VoiceCard } from "voice.slint";
 export { ServerRow, RoomRow, FolderServer, ServerVoiceCard, ServerVoicePreview, ServerVoiceRoom, ServerVoicePerson } from "rail.slint";
 export { PictureStore, Motion, ActivityClock } from "controls.slint";
 export { StagedFile, MentionRow } from "composer.slint";
@@ -787,8 +787,17 @@ export component YapfastWindow inherits Window {
     property <bool> stage-full;
     changed call-focus => { if root.call-focus < 0 { root.stage-full = false; } }
     changed stage-full => { root.full-screen = root.stage-full; }
-    /// Whose stream is watched: their participant id.
+    /// Whose stream the corner shows, of those watched: their participant id.
     in property <string> watch-user;
+    /// Each participant's stream, and its newest picture, in their order.
+    in property <[StreamRow]> streams;
+    in property <[image]> stream-frames;
+    /// The streams sharing the room; see `ParticipantGrid`.
+    in property <int> wall-count;
+    in property <[int]> wall;
+    in property <[int]> strip;
+    /// How many streams aren't being watched.
+    in property <int> unwatched-streams;
     /// What the corner shows while the call is off screen: nothing (0), the
     /// watched stream (1), this account's screen (2) or the camera of the
     /// participant at pip-person (3); and its tile's place, which a click on
@@ -820,7 +829,7 @@ export component YapfastWindow inherits Window {
     in property <bool> watching;
     in property <string> watch-title;
     in property <string> watch-status;
-    /// The newest picture of the watched stream, refreshed by stream-tick.
+    /// The newest picture of the corner's stream, refreshed by stream-tick.
     in-out property <image> watch-frame;
     /// A video plays in the open room: stream-tick brings its pictures to VideoPlayer.
     in property <bool> video-active;
@@ -1279,6 +1288,8 @@ export component YapfastWindow inherits Window {
     callback focus-tile(int);
     /// Watch the participant with this id's stream.
     callback watch-stream(string);
+    /// Watch every stream in the call.
+    callback watch-all-streams;
     /// Someone in a voice channel was clicked in the channel list.
     callback show-voice-person(string, string);
     /// A channel category's heading was clicked; see RoomList.
@@ -1328,7 +1339,7 @@ export component YapfastWindow inherits Window {
         root.prepare-menu(root.menu-target, true);
         if root.voice-menu-volume || root.voice-menu-rows { voice-menu.show(); }
     }
-    callback stop-watching;
+    callback stop-watching(string);
     callback leave-voice;
     callback confirm-switch;
     callback cancel-switch;
@@ -2686,18 +2697,22 @@ export component YapfastWindow inherits Window {
                                     padding: 16px; padding-bottom: 0px;
                                     Text { text: root.voice-description; color: Theme.muted; font-size: 14px; wrap: word-wrap; horizontal-alignment: center; }
                                 }
+                                if root.unwatched-streams >= 2: HorizontalLayout {
+                                    alignment: center; padding-top: 12px;
+                                    ActionButton { text: "Watch all " + root.unwatched-streams + " streams"; small: true; clicked => { root.watch-all-streams(); } }
+                                }
                                 if !root.stage-full: ParticipantGrid {
                                     participants: root.participants; frames: root.participant-frames;
                                     camera-starting: root.camera-starting; sharing: root.sharing; share-live: root.share-live;
                                     share-status: root.share-status; share-frame: root.share-frame;
                                     share-viewers: root.share-viewers; share-viewer-names: root.share-viewer-names;
-                                    stream-tiles: root.stream-tiles; watch-user: root.watch-user; watch-frame: root.watch-frame;
-                                    watch-status: root.watch-status; watch-viewers: root.watch-viewers; watch-viewer-names: root.watch-viewer-names;
+                                    stream-tiles: root.stream-tiles; streams: root.streams; stream-frames: root.stream-frames;
+                                    wall-count: root.wall-count; wall: root.wall; strip: root.strip;
                                     focused: root.call-focus;
                                     focus-tile(slot) => { root.focus-tile(slot); }
                                     full-screen(on) => { root.stage-full = on; }
                                     watch-stream(id) => { root.watch-stream(id); }
-                                    stop-watching => { root.stop-watching(); }
+                                    stop-watching(id) => { root.stop-watching(id); }
                                     open-volume(person, x, y) => { root.open-voice-menu(root.voice-channel, person, x, y); }
                                     tiles(columns, width, height, gap, top, scrolled, shown, focused, focus-width, focus-height) => {
                                         root.call-tiles(columns, width, height, gap, top, scrolled, shown, focused, focus-width, focus-height);
@@ -3454,7 +3469,7 @@ export component YapfastWindow inherits Window {
             root.focus-tile(root.pip-slot);
             root.open-conversation(root.voice-channel);
         }
-        stop => { if root.pip-kind == 1 { root.stop-watching(); } else if root.pip-kind == 2 { root.toggle-share(); } }
+        stop => { if root.pip-kind == 1 { root.stop-watching(root.watch-user); } else if root.pip-kind == 2 { root.toggle-share(); } }
         dropped => {
             root.pip-left = self.x + self.width / 2 < (self.left + self.right + self.width) / 2;
             root.pip-bottom = self.y + self.height / 2 >= (self.top + self.bottom + self.height) / 2;
@@ -3482,11 +3497,11 @@ export component YapfastWindow inherits Window {
                 camera-starting: root.camera-starting; sharing: root.sharing; share-live: root.share-live;
                 share-status: root.share-status; share-frame: root.share-frame;
                 share-viewers: root.share-viewers; share-viewer-names: root.share-viewer-names;
-                stream-tiles: root.stream-tiles; watch-user: root.watch-user; watch-frame: root.watch-frame;
-                watch-status: root.watch-status; watch-viewers: root.watch-viewers; watch-viewer-names: root.watch-viewer-names;
+                stream-tiles: root.stream-tiles; streams: root.streams; stream-frames: root.stream-frames;
+                wall-count: root.wall-count; wall: root.wall; strip: root.strip;
                 focused: root.call-focus;
                 full-screen(on) => { root.stage-full = on; }
-                stop-watching => { root.stop-watching(); }
+                stop-watching(id) => { root.stop-watching(id); }
                 open-volume(person, x, y) => { root.open-voice-menu(root.voice-channel, person, x, y); }
                 tiles(columns, width, height, gap, top, scrolled, shown, focused, focus-width, focus-height) => {
                     root.call-tiles(columns, width, height, gap, top, scrolled, shown, focused, focus-width, focus-height);
