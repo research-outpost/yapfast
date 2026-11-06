@@ -406,7 +406,8 @@ THREAD_STARTER_MESSAGE (type 21), shows the message it was started from.
 Clicking a chip opens the thread beside the channel, as Discord does, in place
 of the member list: its messages, its history and a composer of its own, which
 replies, edits and reacts as the timeline does, and takes files from its + and
-pastes as the channel's does. Files dragged over it go with its message, and
+pastes as the channel's does. Its videos play in place as the timeline's do.
+Files dragged over it go with its message, and
 the card saying where moves over it; the rest of the window takes them for the
 channel. Wayland's data device says where the pointer is; winit doesn't on X11
 and Windows, so Yapfast asks the X server, or Windows, while files hover. Its
