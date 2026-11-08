@@ -1077,8 +1077,7 @@ fn a_voice_message_shows_its_player_which_plays_and_pauses() {
         .action(&window, Action::SelectRoom("general".into()));
     let message = ChatMessage {
         item: "d:1".into(),
-        author: "Sam".into(),
-        attachments: vec![yapfast_core::chat::Attachment {
+        author: "Sam".into(),        attachments: vec![yapfast_core::chat::Attachment {
             name: "voice-message.ogg".into(),
             size: Some(36_000),
             image: false,
