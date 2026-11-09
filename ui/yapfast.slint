@@ -50,6 +50,7 @@ import { StickerPicker, StickerGridTile } from "stickers.slint";
 
 // Rust sees these, besides YapfastWindow.
 export { Theme, Badges, Popup } from "theme.slint";
+export { BuildInfo } from "build-info.slint";
 export { Autoscroll } from "scrollview.slint";
 export { PersonRow, CallLink, ShareScreen, VoiceCard } from "voice.slint";
 export { ServerRow, RoomRow, FolderServer } from "rail.slint";
@@ -3539,6 +3540,7 @@ export component YapfastWindow inherits Window {
         discord-build: root.discord-build; preview: root.preview;
         close => { root.settings-open = false; }
         refresh-devices => { root.refresh-devices(); }
+        copy-text(text) => { root.copy-text(text); }
         if root.settings-section == 0: AccountSettings {
             account-name: root.account-name; account-status: root.account-status; account-status-emoji: root.account-status-emoji;
             account-initial: root.account-initial; account-tint: root.account-tint; account-picture: root.account-picture;

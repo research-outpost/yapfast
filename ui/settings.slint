@@ -4,6 +4,7 @@ import { Theme, Middle, Label, Tip, Popup } from "theme.slint";
 import { ActionButton, IconButton, Avatar, SensitivitySlider, VolumeSlider, TextField, StatusText } from "controls.slint";
 import { DiscordLinkPanel } from "discord.slint";
 import { ChannelRow } from "rail.slint";
+import { BuildStamp } from "build-info.slint";
 import { Soundboard, SoundRow } from "voice.slint";
 
 // Settings: a section's title, a group's heading, a switch with what it does, and
@@ -234,6 +235,8 @@ export component SettingsFrame inherits Rectangle {
     out property <length> content-width: content.width;
     callback chose(int);
     callback close;
+    /// Puts the build's version on the clipboard.
+    callback copy-text(string);
     /// Takes the keys back, for Escape, once what had them is gone.
     public function focus-keys() { keys.focus(); }
     background: Theme.chat;
@@ -267,6 +270,8 @@ export component SettingsFrame inherits Rectangle {
                                 selected: root.selected == row.id; clicked => { root.chose(row.id); }
                             }
                         }
+                        // Which build this is, as Discord's own settings end with its version.
+                        BuildStamp { copy(text) => { root.copy-text(text); } }
                     }
                 }
             }
@@ -334,6 +339,8 @@ export component SettingsScreen inherits Rectangle {
     in property <float> motion: 1;
     callback close;
     callback refresh-devices;
+    callback copy-text(string);
+    callback copy-text(string);
     property <[SettingsRow]> with-discord: [
         { heading: true, text: "SETTINGS" },
         { text: "My account", icon: @image-url("icons/user.svg"), id: 0 },
@@ -367,6 +374,7 @@ export component SettingsScreen inherits Rectangle {
                 if id == 1 { root.refresh-devices(); }
             }
             close => { root.close(); }
+            copy-text(text) => { root.copy-text(text); }
             @children
         }
     }
