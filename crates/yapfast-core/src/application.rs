@@ -2026,6 +2026,10 @@ pub struct Application {
     aside_visible: Vec<String>,
     /// The thread beside's timeline as its pictures were last asked for.
     pictured_aside: Arc<Vec<Arc<ChatMessage>>>,
+    /// [`AppState::list_changes`], the navigation and the selected room
+    /// when the pictures of the rooms in scope were last asked for: those
+    /// rooms are the same until one of them changes.
+    pictured_rooms: Option<(u64, Navigation, Option<String>)>,
     /// A DM with a friend is starting, to open once it has.
     starting_dm: bool,
     /// Its call starts once it opens, as [`Action::CallPerson`] asks.
@@ -2110,11 +2114,14 @@ fn visible_range(
 
 /// The server icons and avatars on screen: the rail, the first DMs listed,
 /// the people in the listed voice channels, the call, `timeline` and the
-/// member list, profiles and people to start a DM with.
+/// member list, profiles and people to start a DM with. Without `list_avatars`, it
+/// leaves out those the UI's virtualized rows ask for; without `rooms`, the people in
+/// the rooms in scope, which take going through every room.
 fn pictures_on_screen<'a>(
     state: &'a AppState,
     timeline: &'a [Arc<ChatMessage>],
     list_avatars: bool,
+    rooms: bool,
 ) -> impl Iterator<Item = &'a str> {
     state
         .servers
@@ -2125,7 +2132,7 @@ fn pictures_on_screen<'a>(
         .chain(
             state
                 .scoped_rooms()
-                .filter(move |_| list_avatars)
+                .filter(move |_| rooms)
                 .filter_map(|room| room.avatar.as_deref())
                 .take(LISTED_PICTURES),
         )
@@ -2289,8 +2296,10 @@ fn pictures_on_screen<'a>(
                 }),
         )
         .chain(
-            state
-                .scoped_rooms()
+            rooms
+                .then(|| state.scoped_rooms())
+                .into_iter()
+                .flatten()
                 .flat_map(|room| &room.people)
                 .filter_map(|person| person.avatar.as_deref()),
         )
@@ -2408,9 +2417,20 @@ impl Application {
 
     /// Asks for the server icons and avatars on screen that weren't asked
     /// for before; see [`pictures_on_screen`]. The timeline, which can hold
-    /// thousands of messages, is gone through only when it changed.
+    /// thousands of messages, and the rooms in scope, which can be thousands
+    /// of channels, are gone through only when they changed: this runs on
+    /// every event.
     fn request_pictures(&mut self) -> Option<Effect> {
         let state = &self.state;
+        let rooms_changed =
+            !self
+                .pictured_rooms
+                .as_ref()
+                .is_some_and(|(changes, navigation, selected)| {
+                    *changes == state.list_changes
+                        && *navigation == state.navigation
+                        && *selected == state.selected
+                });
         let timeline = if Arc::ptr_eq(&self.pictured_timeline, &state.messages) {
             &[][..]
         } else {
@@ -2420,18 +2440,25 @@ impl Application {
         let mut wanted = Vec::new();
         // Virtualized UI rows request their own avatars; this covers profiles,
         // calls and the custom emoji in nearby messages.
-        for url in pictures_on_screen(state, timeline, false) {
+        for url in pictures_on_screen(state, timeline, false, rooms_changed) {
             if !self.requested_pictures.contains(url) {
                 self.requested_pictures.insert(url.to_owned());
                 wanted.push(url.to_owned());
             }
         }
         self.pictured_timeline = self.state.messages.clone();
+        if rooms_changed {
+            self.pictured_rooms = Some((
+                self.state.list_changes,
+                self.state.navigation.clone(),
+                self.state.selected.clone(),
+            ));
+        }
         // The thread beside is short, and shows its custom emoji whole.
         if let Some(aside) = &self.state.aside
             && !Arc::ptr_eq(&self.pictured_aside, &aside.messages)
         {
-            for url in pictures_on_screen(state, &aside.messages, false) {
+            for url in pictures_on_screen(state, &aside.messages, false, false) {
                 if !self.requested_pictures.contains(url) {
                     self.requested_pictures.insert(url.to_owned());
                     wanted.push(url.to_owned());
@@ -2492,11 +2519,11 @@ impl Application {
                 let start = range.start().saturating_sub(PICTURED_AROUND);
                 &messages[start..(range.end() + 1 + PICTURED_AROUND).min(messages.len())]
             });
-        let shown: HashSet<String> = pictures_on_screen(&self.state, timeline, true)
+        let shown: HashSet<String> = pictures_on_screen(&self.state, timeline, true, true)
             .chain(
                 aside
                     .into_iter()
-                    .flat_map(|aside| pictures_on_screen(&self.state, aside, true)),
+                    .flat_map(|aside| pictures_on_screen(&self.state, aside, true, false)),
             )
             .map(str::to_owned)
             .collect();
