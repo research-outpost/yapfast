@@ -60,6 +60,7 @@ mod stickers;
 mod theme;
 mod tiles;
 mod title_bar;
+mod updates;
 
 use callbacks::bind_callbacks;
 use messages::*;
@@ -182,6 +183,7 @@ pub fn run(
     prepare(&window);
     let adapter = Adapter::new(Arc::new(runtime), root, &window)?;
     bind_callbacks(&window, &adapter);
+    updates::start(&adapter, &window);
     watch_window(&window, &adapter);
     adapter.borrow_mut().watch_away();
     adapter.borrow_mut().watch_talk_key(&window);
@@ -281,6 +283,13 @@ fn prepare(window: &YapfastWindow) {
             .set_size(slint::PhysicalSize::new(width, height));
     }
     window.set_emoji_font(emoji::family().into());
+    let build = crate::build_info::current();
+    let shown = window.global::<BuildInfo>();
+    shown.set_headline(build.headline().into());
+    shown.set_channel(build.channel().label().into());
+    shown.set_details(build.details().into());
+    shown.set_tone(build.channel().tone());
+    shown.set_summary(build.summary().into());
     copy_whole_messages(window);
     mark_autoscrolls(window);
 }
@@ -1128,6 +1137,17 @@ struct Layout {
     /// Starting Yapfast again on this folder starts another, rather than
     /// showing the running one's window; see [`crate::instance`].
     multiple_windows: bool,
+    /// Menus offer Copy ID, as Discord's Developer Mode does; off unless
+    /// turned on.
+    developer_mode: bool,
+    /// Settings' About page asks GitHub for the releases when Yapfast starts;
+    /// off unless turned on, and then Yapfast makes no request of its own.
+    /// See [`updates`].
+    check_for_updates: bool,
+    /// Nightly builds count as newer releases; off unless turned on.
+    update_nightlies: bool,
+    /// The tag of the release that Skip this update hid.
+    skipped_update: Option<String>,
     /// The desktop draws the window's title bar; unset, Yapfast draws its own
     /// on desktops that give windows one. See [`title_bar`].
     system_title_bar: Option<bool>,
@@ -1630,6 +1650,8 @@ struct Adapter {
     runtime: Arc<BackgroundRuntime>,
     root: PathBuf,
     layout: Layout,
+    /// What About knows of newer releases.
+    updates: updates::State,
     /// The rows of the emoji picker's grid that may hold pictures it drew, first
     /// and last: see `fill_shown_glyphs`.
     emoji_rows_filled: (usize, usize),
@@ -1945,6 +1967,7 @@ impl Adapter {
                 runtime,
                 root,
                 layout,
+                updates: Default::default(),
                 emoji_rows_filled: (0, 0),
                 app,
                 models,
@@ -2088,6 +2111,7 @@ impl Adapter {
     fn attach(&mut self, window: &YapfastWindow) {
         self.models.attach(window);
         self.layout.apply(window);
+        updates::show(window, &self.layout, &self.updates);
         self.watch_talk_key(window);
         self.show_protocol(window);
         // The theme being edited goes unsaved with the old window, and rows

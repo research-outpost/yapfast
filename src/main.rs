@@ -44,6 +44,8 @@ mod twemoji;
 #[cfg(feature = "desktop")]
 mod ui;
 #[cfg(feature = "desktop")]
+mod update;
+#[cfg(feature = "desktop")]
 mod zoom;
 
 use anyhow::{Context, Result, bail};
