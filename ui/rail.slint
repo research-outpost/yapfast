@@ -1,3 +1,4 @@
+import { NewTag } from "new-tags.slint";
 import { ListView } from "scrollview.slint";
 import { Theme, Tip, Middle, Label } from "theme.slint";
 import { Avatar, ActivityClock, PictureStore, StatusText, VoiceSpot } from "controls.slint";
@@ -438,6 +439,8 @@ export component ChannelRow inherits Rectangle {
     in property <bool> danger;
     in property <bool> unread;
     in property <string> badge;
+    /// Marks a settings page with something new on it.
+    in property <bool> fresh;
     /// A channel this account may not join: drawn faint.
     in property <bool> locked;
     /// A DM with a call going on.
@@ -642,6 +645,7 @@ export component ChannelRow inherits Rectangle {
                     color: Theme.muted; font-size: 12px; vertical-alignment: center;
                     accessible-role: none;
                 }
+                if root.fresh: Middle { NewTag { } }
                 if root.badge != "": Middle {
                     Rectangle {
                         width: max(18px, badge-text.preferred-width + 10px); height: 18px; border-radius: 9px; background: Theme.danger;

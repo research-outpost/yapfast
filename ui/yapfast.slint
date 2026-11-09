@@ -51,6 +51,8 @@ import { StickerPicker, StickerGridTile } from "stickers.slint";
 // Rust sees these, besides YapfastWindow.
 export { Theme, Badges, Popup } from "theme.slint";
 export { BuildInfo, Updates, UpdateStatus } from "build-info.slint";
+import { NewTags } from "new-tags.slint";
+export { NewTags } from "new-tags.slint";
 export { Autoscroll } from "scrollview.slint";
 export { PersonRow, StreamRow, CallLink, ShareScreen, VoiceCard } from "voice.slint";
 export { ServerRow, RoomRow, FolderServer, ServerVoiceCard, ServerVoicePreview, ServerVoiceRoom, ServerVoicePerson } from "rail.slint";
@@ -1065,11 +1067,20 @@ export component YapfastWindow inherits Window {
     in-out property <bool> settings-open;
     // Closing settings stops linking Discord there.
     changed settings-open => {
+        root.track-new();
         if !self.settings-open && self.link-phase != 0 { self.cancel-discord-link(); }
         if !self.settings-open { self.camera-testing = false; }
         if !self.settings-open && self.theme-editor { self.cancel-theme(); }
     }
     in-out property <int> settings-section;
+    // The section whose NEW tags are showing, so leaving it can say they were seen.
+    property <int> new-viewing: -1;
+    function track-new() {
+        if root.new-viewing != (root.settings-open ? root.settings-section : -1) {
+            if root.new-viewing >= 0 { NewTags.left(root.new-viewing); }
+            root.new-viewing = root.settings-open ? root.settings-section : -1;
+        }
+    }
     /// Preferences people set in the settings; preferences-changed reports any change.
     in-out property <bool> twelve-hour-clock;
     in-out property <bool> clock-seconds;
@@ -1189,7 +1200,10 @@ export component YapfastWindow inherits Window {
     callback save-theme();
     callback cancel-theme();
     callback delete-theme();
-    changed settings-section => { if root.theme-editor && root.settings-section != 7 { root.cancel-theme(); } }
+    changed settings-section => {
+        root.track-new();
+        if root.theme-editor && root.settings-section != 7 { root.cancel-theme(); }
+    }
     out property <length> message-font-size: root.text-size == 0 ? 14px : root.text-size == 2 ? 18px : 16px;
     // The sidebar keeps 180 to 380px. Dragging also leaves the conversation 420px;
     // the window width cannot enter this binding, because it depends on the layout.
