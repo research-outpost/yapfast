@@ -604,7 +604,7 @@ pub(super) fn message_row(message: &ChatMessage, revealed: &HashSet<String>) -> 
                         ModelRc::new(VecModel::from(waveform_bars(&voice.waveform)))
                     }),
                     duration: voice
-                        .map(|voice| super::refresh::video_time(voice.duration_ms, None).into())
+                        .map(|voice| super::refresh::voice_time(voice.duration_ms).into())
                         .unwrap_or_default(),
                 }
             })
