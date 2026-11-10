@@ -25,7 +25,9 @@ import { Theme, Tip, ReactionHover, Middle, Popup, PopupMotion } from "theme.sli
 import { TitleBar, ResizeEdges } from "title_bar.slint";
 import { GifPicker, GifTile, PickerTab } from "gifs.slint";
 import { ActionButton, IconButton, PingToggle, DeviceToggle, Avatar, TextField, MessagesSkeleton, ContextMenu, MenuItem, MenuRow, QuickDeviceMenu, HeaderToggle, Banner, StatusText, PictureStore } from "controls.slint";
-import { VoicePlayer } from "messages.slint";import { RequestRow, FriendRow, FriendsScreen, HeaderTab, RequestsScreen, AddFriendDialog } from "friends.slint";
+import { VoicePlayer } from "messages.slint";
+import { RoomList, VoiceCardView } from "rail.slint";
+import { RequestRow, FriendRow, FriendsScreen, HeaderTab, RequestsScreen, AddFriendDialog } from "friends.slint";
 import { ContactRow, PlaceRow, ReactionPill, ReactorRow, StatusDialog, NewDmDialog, ForwardDialog, QuickSwitcher, ReactionsDialog, StatusMenu, PersonPrompt, PersonDialog, LeavingDialog, PollAnswerDraft, PollDialog } from "dialogs.slint";
 import { InvitePrompt, InviteDialog, JoinPrompt, JoinDialog, EventPrompt, EventDialog, GiftPrompt, GiftDialog, OAuthPrompt, OAuthDialog, ChannelPrompt, ChannelDialog, ProfileEditorPrompt, ProfileEditorDialog } from "server.slint";
 import { SignInScreen, VerifyBanner } from "sign-in.slint";
@@ -42,7 +44,7 @@ import { BrowseRow, BrowseScreen } from "browse.slint";
 // Rust sees these, besides YapfastWindow.
 export { Theme, Badges, Popup } from "theme.slint";
 export { Autoscroll } from "scrollview.slint";
-export { PersonRow, CallLink, ShareScreen } from "voice.slint";
+export { PersonRow, CallLink, ShareScreen, VoiceCard } from "voice.slint";
 export { ServerRow, RoomRow, FolderServer } from "rail.slint";
 export { PictureStore, Motion, ActivityClock } from "controls.slint";
 export { StagedFile, MentionRow } from "composer.slint";
@@ -1504,8 +1506,14 @@ export component YapfastWindow inherits Window {
     // of its member list.
     property <bool> aside-docked: (root.aside-open || root.new-thread-open) && !root.search-open;
     // Rows remade under the pointer show their tooltip again; it goes with the screen.
-    changed friends-open => { Tip.text = ""; }
-    changed browse-open => { Tip.text = ""; }
+    changed friends-open => { Tip.text = ""; VoiceCard.people = []; }
+    changed browse-open => { Tip.text = ""; VoiceCard.people = []; }
+    // Another server's channels take the place of the row a voice card was
+    // beside, and a dialog or screen over the window covers it.
+    changed sidebar-title => { VoiceCard.people = []; }
+    changed composer-covered => {
+        if self.composer-covered { VoiceCard.people = []; }
+    }
     property <bool> profile-docked: root.profile-available && root.profile-panel && root.panel-profile-shown && !root.search-open && !root.aside-docked;
     // Search results take the place of the member list or the profile.
     property <length> docked-width: root.search-open ? 420px : root.aside-docked ? root.aside-shown : (root.members-docked ? 240px : 0px) + (root.profile-docked ? 300px : 0px);
@@ -4137,5 +4145,6 @@ export component YapfastWindow inherits Window {
         drop-shadow-blur: 12px; drop-shadow-color: #00000080; drop-shadow-offset-y: 3px;
         tip-text := Text { text: Tip.text; color: Theme.text; font-size: 14px; font-weight: 700; }
     }
+
     if Autoscroll.shown: AutoscrollMarker {}
 }
