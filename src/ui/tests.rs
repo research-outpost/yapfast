@@ -1015,6 +1015,453 @@ fn pictures_on_their_way_hold_their_place_as_skeletons() {
 }
 
 #[test]
+fn a_voice_message_shows_its_player_which_plays_and_pauses() {
+    i_slint_backend_testing::init_no_event_loop();
+    let directory = tempfile::tempdir().unwrap();
+    let window = classic_window();
+    let adapter = Adapter::new(
+        Arc::new(BackgroundRuntime::new().unwrap()),
+        directory.path().into(),
+        &window,
+    )
+    .unwrap();
+    bind_callbacks(&window, &adapter);
+    window.invoke_explore_preview();
+    adapter
+        .borrow_mut()
+        .action(&window, Action::SelectRoom("general".into()));
+    let message = ChatMessage {
+        item: "d:1".into(),
+        author: "Sam".into(),
+        attachments: vec![yapfast_core::chat::Attachment {
+            name: "voice-message.ogg".into(),
+            size: Some(36_000),
+            image: false,
+            dimensions: None,
+            preview: None,
+            preview_failed: false,
+            placement: Placement::Message,
+            gif: None,
+            spoiler: false,
+            video: false,
+            url: Some("https://cdn.example/voice-message.ogg".into()),
+        }],
+        voice: Some(yapfast_core::chat::VoiceMessage {
+            duration_ms: 5_480,
+            waveform: [0, 255, 51].into(),
+        }),
+        ..Default::default()
+    };
+    let row = message_row_plain(&message);
+    let file = row.files.row_data(0).unwrap();
+    assert!(file.voice);
+    assert_eq!(file.duration, "0:05");
+    let bars: Vec<f32> = file.waveform.iter().collect();
+    assert_eq!(bars.len(), 32);
+    assert_eq!((bars[0], bars[31]), (0.0, 0.2));
+    assert!(bars.contains(&1.0));
+    adapter.borrow_mut().app.state.messages = Arc::new(vec![Arc::new(message)]);
+    adapter.borrow_mut().refresh(&window);
+    let player = window.global::<VoicePlayer>();
+    assert_eq!(player.get_item(), "", "nothing plays yet");
+
+    // Its button plays it, which the backend does; meanwhile it shows as
+    // started.
+    player.invoke_toggle("d:1".into());
+    assert_eq!(player.get_item(), "d:1");
+    assert!(player.get_playing() && player.get_loading());
+    assert_eq!(player.get_time(), "0:00 / 0:05");
+    let reach = adapter.borrow_mut().apply(Event::VoiceMessage(Some(
+        yapfast_core::chat::VoicePlayback {
+            room: "general".into(),
+            item: "d:1".into(),
+            loading: false,
+            playing: true,
+            position_ms: 2_740,
+            error: None,
+        },
+    )));
+    adapter.borrow_mut().show(&window, reach);
+    assert!(!player.get_loading());
+    assert_eq!(player.get_progress(), 0.5);
+    assert_eq!(player.get_time(), "0:02 / 0:05");
+
+    // Again, it pauses where it is.
+    player.invoke_toggle("d:1".into());
+    assert!(!player.get_playing());
+    assert_eq!(player.get_progress(), 0.5);
+    // At its end it goes back to its start, showing how long it is.
+    let reach = adapter.borrow_mut().apply(Event::VoiceMessage(Some(
+        yapfast_core::chat::VoicePlayback {
+            room: "general".into(),
+            item: "d:1".into(),
+            ..Default::default()
+        },
+    )));
+    adapter.borrow_mut().show(&window, reach);
+    assert!(!player.get_playing());
+    assert_eq!(
+        (player.get_progress(), player.get_time().as_str()),
+        (0.0, "")
+    );
+
+    // Its speed button goes from 1x to 1.5x to 2x and back; its volume
+    // stays as set.
+    let speeds: Vec<String> = (0..4)
+        .map(|_| {
+            let speed = player.get_speed().to_string();
+            player.invoke_cycle_speed();
+            speed
+        })
+        .collect();
+    assert_eq!(speeds, ["1x", "1.5x", "2x", "1x"]);
+    player.invoke_change_volume(0.25);
+    assert_eq!(player.get_volume(), 0.25);
+}
+
+#[test]
+fn a_voice_messages_speed_and_volume_slide_out_while_pointed_at() {
+    use slint::platform::{PointerEventButton, WindowEvent};
+    let window = showing(vec![ChatMessage {
+        author: "Sam".into(),
+        attachments: vec![yapfast_core::chat::Attachment {
+            name: "voice-message.ogg".into(),
+            size: Some(36_000),
+            image: false,
+            dimensions: None,
+            preview: None,
+            preview_failed: false,
+            placement: Placement::Message,
+            gif: None,
+            spoiler: false,
+            video: false,
+            url: None,
+        }],
+        voice: Some(yapfast_core::chat::VoiceMessage {
+            duration_ms: 5_000,
+            waveform: [128; 64].into(),
+        }),
+        ..Default::default()
+    }]);
+    let cycled = Rc::new(Cell::new(0));
+    let count = cycled.clone();
+    window
+        .global::<VoicePlayer>()
+        .on_cycle_speed(move || count.set(count.get() + 1));
+    let wait = |ms| {
+        i_slint_backend_testing::mock_elapsed_time(Duration::from_millis(ms));
+        settle(&window);
+    };
+    let point = |x: f32, y: f32| {
+        window.window().dispatch_event(WindowEvent::PointerMoved {
+            position: slint::LogicalPosition::new(x, y),
+        });
+    };
+    let click = |x: f32, y: f32| {
+        let (position, button) = (slint::LogicalPosition::new(x, y), PointerEventButton::Left);
+        let dispatch = |event| window.window().dispatch_event(event);
+        dispatch(WindowEvent::PointerPressed { position, button });
+        dispatch(WindowEvent::PointerReleased { position, button });
+    };
+
+    // With animations off they always show: the speed button is somewhere
+    // along the message, found from the left, before the volume button.
+    window.global::<Motion>().set_never(true);
+    settle(&window);
+    let speed = (300..1000)
+        .step_by(6)
+        .flat_map(|x| (60..680).step_by(6).map(move |y| (x as f32, y as f32)))
+        .find(|&(x, y)| {
+            click(x, y);
+            cycled.get() > 0
+        })
+        .expect("the speed button shows");
+
+    // With them on, they're folded away until the pointer comes, then slide
+    // out.
+    window.global::<Motion>().set_never(false);
+    window.invoke_focus_composer();
+    point(1100., 40.);
+    wait(300);
+    let before = cycled.get();
+    click(speed.0, speed.1);
+    assert_eq!(cycled.get(), before, "folded away as the pointer comes");
+    wait(300);
+    click(speed.0, speed.1);
+    assert_eq!(cycled.get(), before + 1, "out while pointed at");
+    point(1100., 40.);
+    wait(300);
+    click(speed.0, speed.1);
+    assert_eq!(cycled.get(), before + 1, "folded again once it left");
+}
+
+#[test]
+fn the_sticker_picker_lists_the_servers_stickers_above_the_packs() {
+    i_slint_backend_testing::init_no_event_loop();
+    let directory = tempfile::tempdir().unwrap();
+    let window = YapfastWindow::new().unwrap();
+    let adapter = Adapter::new(
+        Arc::new(BackgroundRuntime::new().unwrap()),
+        directory.path().into(),
+        &window,
+    )
+    .unwrap();
+    bind_callbacks(&window, &adapter);
+    let sticker = |id: &str, name: &str| yapfast_core::chat::Sticker {
+        id: id.into(),
+        name: name.into(),
+        format: 1,
+        picture: format!("https://cdn.discordapp.com/stickers/{id}.png?size=96"),
+        usable: true,
+    };
+    {
+        let mut adapter = adapter.borrow_mut();
+        let state = &mut adapter.app.state;
+        state.stickers.open = true;
+        state.stickers.server_for = Some("10".into());
+        state.stickers.servers = vec![yapfast_core::application::ServerStickers {
+            id: "10".into(),
+            name: "Server".into(),
+            stickers: vec![sticker("1", "Wave"), sticker("2", "Bounce")],
+        }];
+        state.stickers.packs = vec![yapfast_core::chat::StickerCollection {
+            id: "20".into(),
+            name: "Wumpus".into(),
+            stickers: vec![sticker("3", "Party")],
+        }];
+        adapter.show_stickers(&window);
+    }
+    let tiles = window.get_sticker_tiles();
+    let labels: Vec<String> = (0..tiles.row_count())
+        .filter_map(|row| tiles.row_data(row))
+        .map(|tile| tile.label.to_string())
+        .collect();
+    // Every collection lists: Frequently Used first, then the server's own
+    // stickers, then Discord's packs.
+    assert_eq!(
+        labels,
+        [
+            "Frequently Used",
+            "Party",
+            "Server",
+            "Wave",
+            "Bounce",
+            "Wumpus",
+            "Party"
+        ],
+        "Frequently Used first, then the server's own stickers"
+    );
+    let locked: Vec<bool> = (0..tiles.row_count())
+        .filter_map(|row| tiles.row_data(row))
+        .filter(|tile| tile.kind == 0)
+        .map(|tile| tile.usable)
+        .collect();
+    assert_eq!(
+        locked,
+        [true, true, true, true],
+        "the server's are usable here, and Discord's packs are anyone's"
+    );
+    // The rail lists the same sections the emoji picker's does, with no line
+    // between them.
+    let sections = window.get_sticker_sections();
+    let shown: Vec<(String, SectionGlyph)> = (0..sections.row_count())
+        .filter_map(|row| sections.row_data(row))
+        .map(|section| (section.name.to_string(), section.glyph))
+        .collect();
+    assert_eq!(
+        shown,
+        [
+            ("Frequently Used".to_string(), SectionGlyph::Clock),
+            ("Server".to_string(), SectionGlyph::None),
+            ("Wumpus".to_string(), SectionGlyph::None),
+        ],
+        "Frequently Used carries the clock, as the emoji picker's does"
+    );
+}
+
+#[test]
+fn a_servers_icon_draws_on_its_heading_and_rail_button() {
+    i_slint_backend_testing::init_no_event_loop();
+    let directory = tempfile::tempdir().unwrap();
+    let window = YapfastWindow::new().unwrap();
+    let adapter = Adapter::new(
+        Arc::new(BackgroundRuntime::new().unwrap()),
+        directory.path().into(),
+        &window,
+    )
+    .unwrap();
+    bind_callbacks(&window, &adapter);
+    let icon = "https://cdn.discordapp.com/icons/10/abc.png?size=128";
+    {
+        let mut adapter = adapter.borrow_mut();
+        let state = &mut adapter.app.state;
+        state.servers = vec![Arc::new(yapfast_core::chat::ChatServer {
+            id: yapfast_core::discord::server_id("10"),
+            name: "Server".into(),
+            channels: vec![],
+            discord: true,
+            muted: false,
+            unavailable: false,
+            icon: Some(icon.into()),
+            folder: None,
+            hide_muted: false,
+            community: false,
+            pinned: Vec::new(),
+            banner: None,
+            verified: false,
+            events: Vec::new(),
+            boosts: None,
+            tag: None,
+        })];
+        state.stickers.open = true;
+        state.stickers.server_for = Some("10".into());
+        state.stickers.servers = vec![yapfast_core::application::ServerStickers {
+            id: "10".into(),
+            name: "Server".into(),
+            stickers: vec![yapfast_core::chat::Sticker {
+                id: "1".into(),
+                name: "Wave".into(),
+                format: 1,
+                picture: "https://cdn.discordapp.com/stickers/1.png?size=96".into(),
+                usable: true,
+            }],
+        }];
+        adapter.show_stickers(&window);
+    }
+    let heading_has_its_icon = |window: &YapfastWindow| {
+        let tiles = window.get_sticker_tiles();
+        (0..tiles.row_count())
+            .filter_map(|row| tiles.row_data(row))
+            .find(|tile| tile.kind == 1)
+            .is_some_and(|tile| tile.image.size().width > 0)
+    };
+    // Before it came, the heading has no icon.
+    assert!(!heading_has_its_icon(&window));
+    // Once the app's pictures carry it, the heading and the rail button draw it.
+    {
+        let mut adapter = adapter.borrow_mut();
+        adapter.app.state.pictures.insert(
+            icon.into(),
+            Arc::new(Picture {
+                width: 128,
+                height: 128,
+                rgba: yapfast_core::chat::Pixels::new(128, 128, vec![255; 128 * 128 * 4]),
+                ..Default::default()
+            }),
+        );
+        adapter.show_stickers(&window);
+    }
+    assert!(
+        heading_has_its_icon(&window),
+        "the server's icon draws on its heading"
+    );
+    let sections = window.get_sticker_sections();
+    let section = sections.row_data(0).expect("the server's section");
+    assert!(
+        section.icon.picture.size().width > 0,
+        "and on its rail button"
+    );
+}
+
+#[test]
+fn a_stickers_picture_reaches_its_tile_and_the_grid_keeps_a_window() {
+    i_slint_backend_testing::init_no_event_loop();
+    let directory = tempfile::tempdir().unwrap();
+    let window = YapfastWindow::new().unwrap();
+    let adapter = Adapter::new(
+        Arc::new(BackgroundRuntime::new().unwrap()),
+        directory.path().into(),
+        &window,
+    )
+    .unwrap();
+    bind_callbacks(&window, &adapter);
+    let sticker = |id: usize| yapfast_core::chat::Sticker {
+        id: id.to_string(),
+        name: format!("Sticker {id}"),
+        format: 1,
+        picture: format!("https://cdn.discordapp.com/stickers/{id}.png?size=96"),
+        usable: true,
+    };
+    let stickers: Vec<_> = (0..80).map(sticker).collect();
+    let first = stickers[0].picture.clone();
+    {
+        let mut adapter = adapter.borrow_mut();
+        let state = &mut adapter.app.state;
+        state.stickers.open = true;
+        state.stickers.server_for = Some("10".into());
+        state.stickers.servers = vec![yapfast_core::application::ServerStickers {
+            id: "10".into(),
+            name: "Server".into(),
+            stickers,
+        }];
+        adapter.show_stickers(&window);
+    }
+    // Before the grid says how tall it is, all of it is published.
+    let all = window.get_sticker_tiles().row_count();
+    assert_eq!(all, 81, "the server's heading and its 80 stickers");
+    // Once it does, only what is in sight and a screen either side is.
+    adapter.borrow_mut().stickers_scrolled(&window, 0.0, 486.0);
+    let windowed = window.get_sticker_tiles().row_count();
+    assert!(
+        windowed < all && windowed >= 4,
+        "a window, not the whole grid: {windowed} of {all}"
+    );
+    // A picture that arrives draws on its tile, though the window did not move.
+    {
+        let mut adapter = adapter.borrow_mut();
+        adapter.app.state.stickers.pictures.insert(
+            first.clone(),
+            yapfast_core::application::StickerPicture::Shown(Arc::new(Picture {
+                width: 96,
+                height: 96,
+                rgba: yapfast_core::chat::Pixels::new(96, 96, vec![255; 96 * 96 * 4]),
+                ..Default::default()
+            })),
+        );
+        adapter.show_stickers(&window);
+    }
+    let tiles = window.get_sticker_tiles();
+    assert!(
+        (0..tiles.row_count())
+            .filter_map(|row| tiles.row_data(row))
+            .any(|tile| tile.kind == 0 && tile.image.size().width > 0),
+        "the picture arrived and drew on its tile"
+    );
+}
+
+#[test]
+fn a_messages_sticker_is_160px_square() {
+    // A sticker's picture may come smaller than Discord's 160px — an old kept
+    // one, or a Lottie drawn small — but its cell is 160 square, as Discord
+    // draws it.
+    let picture = Arc::new(Picture {
+        width: 96,
+        height: 96,
+        rgba: yapfast_core::chat::Pixels::new(96, 96, vec![0; 96 * 96 * 4]),
+        ..Default::default()
+    });
+    let row = message_row_plain(&ChatMessage {
+        attachments: vec![yapfast_core::chat::Attachment {
+            name: "Wave".into(),
+            size: None,
+            image: true,
+            dimensions: Some((160, 160)),
+            preview: Some(picture),
+            preview_failed: false,
+            placement: Placement::Sticker,
+            gif: None,
+            spoiler: false,
+            video: false,
+            url: None,
+        }],
+        ..Default::default()
+    });
+    let cell = row.stickers.row_data(0).expect("the sticker shows");
+    assert_eq!((cell.width, cell.height), (160, 160));
+    assert!(!cell.loading);
+}
+
+#[test]
 fn a_selection_copies_the_pictures_it_runs_through() {
     let picture = Arc::new(Picture {
         width: 40,
