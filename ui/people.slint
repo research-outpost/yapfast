@@ -1,6 +1,6 @@
 import { ScrollView, ListView } from "scrollview.slint";
 import { Theme, Middle, Label } from "theme.slint";
-import { ActionButton, IconButton, Avatar, StatusText, PictureStore, TextField } from "controls.slint";
+import { ActionButton, IconButton, Avatar, ActivityClock, StatusText, PictureStore, TextField } from "controls.slint";
 import { StatusDot } from "rail.slint";
 
 /// A member of the open room. A heading starts each role's group.
@@ -125,12 +125,6 @@ export struct ActivityRow {
     /// A stream's address, and what the title opens, such as a Spotify
     /// song's page.
     url: string, link: string,
-}
-
-/// Now, for activities' timers: seconds since 2020 began, kept current
-/// once a second while a profile with a timed activity shows.
-export global ActivityClock {
-    in property <int> now;
 }
 
 export struct ProfileData {

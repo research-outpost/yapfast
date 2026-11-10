@@ -1581,8 +1581,11 @@ struct Adapter {
     window: slint::Weak<YapfastWindow>,
     away: away::Away,
     call_timer: call_timer::CallTimer,
-    /// Ticks ActivityClock while a profile on screen times an activity.
+    /// Ticks ActivityClock while a profile on screen times an activity, or
+    /// the channel list a busy voice channel's call.
     activity_clock: slint::Timer,
+    /// A row of the channel list counts a voice channel's call time.
+    voice_timed: bool,
     navigation: Navigation,
     /// Whether the forward dialog was open at the last refresh.
     forwarding: bool,
@@ -1847,6 +1850,7 @@ impl Adapter {
                 away: away::Away::default(),
                 call_timer: call_timer::CallTimer::default(),
                 activity_clock: slint::Timer::default(),
+                voice_timed: false,
                 navigation: Navigation::default(),
                 forwarding: false,
                 selection_version: 0,

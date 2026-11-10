@@ -1209,6 +1209,7 @@ async fn room_index(client: &Client) -> RoomIndex {
             forum: false,
             unlisted: false,
             preview: None,
+            voice_started: None,
         });
     }
     result.sort_by(|a, b| {

@@ -4252,6 +4252,7 @@ fn friends_in_a_servers_voice_channel_show_where() {
         forum: false,
         unlisted: false,
         preview: None,
+        voice_started: None,
     };
     let mut state = AppState::default();
     state.rooms = [
@@ -6932,6 +6933,7 @@ fn requests_list_someone_once_with_their_message() {
             text: format!("Hi from {person}"),
             at: 1_700_000_000_000,
         })),
+        voice_started: None,
     };
     let mut state = AppState::default();
     state.friend_requests = vec![
