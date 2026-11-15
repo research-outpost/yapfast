@@ -288,8 +288,10 @@ fn relaunch(arguments: &[String], gpu_failure: Option<&str>, link: Option<&str>)
     }
     #[cfg(not(unix))]
     {
-        let status = command.status().context("could not restart Yapfast")?;
-        std::process::exit(status.code().unwrap_or(1));
+        // Waiting for the replacement would keep this process and its stopped
+        // window alive until the new client closes.
+        command.spawn().context("could not restart Yapfast")?;
+        std::process::exit(0);
     }
 }
 
