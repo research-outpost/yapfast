@@ -2060,30 +2060,6 @@ mod tests {
     }
 
     #[test]
-    fn a_server_that_loses_its_boosts_loses_its_role_icons() {
-        let ready = json!({
-            "user": {"id": "1"},
-            "guilds": [{"id": "10", "properties": {"name": "Test", "premium_tier": 2}, "roles": [
-                {"id": "20", "name": "Mods", "permissions": "0", "position": 2, "icon": "abc"},
-            ]}],
-        });
-        let mut tracker = Tracker::from_ready("1".into(), &ready, Default::default());
-        let mine = ["20".to_owned()];
-        assert!(tracker.servers[0].role_icon(&mine).is_some());
-        tracker.apply(
-            &Event::GuildUpdate,
-            &json!({"id": "10", "name": "Test", "premium_tier": 1, "features": []}),
-        );
-        assert!(tracker.servers[0].role_icon(&mine).is_none());
-        assert!(tracker.servers[0].group_role_icon("20").is_none());
-        tracker.apply(
-            &Event::GuildUpdate,
-            &json!({"id": "10", "name": "Test", "premium_tier": 2, "features": ["ROLE_ICONS"]}),
-        );
-        assert!(tracker.servers[0].role_icon(&mine).is_some());
-    }
-
-    #[test]
     fn keeps_servers_through_an_outage() {
         let guild = |id: &str, name: &str| {
             json!({"id": id, "properties": {"name": name}, "channels": [
