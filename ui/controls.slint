@@ -435,6 +435,15 @@ export component CallButton inherits VerticalLayout {
     }
 }
 
+// Whether animations play: only while Yapfast's window has the focus, as in
+// Discord, so GIFs on another screen hold still where they are.
+export global Motion {
+    in property <bool> playing: true;
+    /// Animations are turned off in the settings: what would move into
+    /// view shows at once, or always.
+    in property <bool> never;
+}
+
 // A picture, or an animation's frames in turn while it shows.
 export component Picture inherits Image {
     in property <image> still;
