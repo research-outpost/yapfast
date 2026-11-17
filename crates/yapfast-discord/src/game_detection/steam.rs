@@ -304,6 +304,7 @@ mod tests {
                     &path
                         .to_string_lossy()
                         .replace("Fixture/game", "FixtureOther/game")
+                        .replace(r"Fixture\game", r"FixtureOther\game")
                 )
                 .is_none()
         );

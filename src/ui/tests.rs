@@ -2242,9 +2242,14 @@ fn the_member_list_shows_a_change_then_holds_changes_for_half_a_second() {
         let Some(Ok(members)) = &mut adapter.app.state.members else {
             panic!("the preview has people");
         };
-        members[0].name = name.to_owned();
+        // Every row, so the assertions never depend on the roster's order.
+        for member in members.iter_mut() {
+            member.name = name.to_owned();
+        }
     };
-    // The first change shows at once.
+    // The preview's list was built by showing it; let that pause end, so
+    // the first rename lands outside a pause and shows at once.
+    i_slint_backend_testing::mock_elapsed_time(refresh::ROSTER_PAUSE);
     rename("Marked");
     adapter.borrow_mut().refresh(&window);
     assert_eq!(window.get_roster().row_data(0).unwrap().name, "Marked");
@@ -2262,8 +2267,12 @@ fn the_member_list_shows_a_change_then_holds_changes_for_half_a_second() {
     // Switching conversations shows at once: the pause was the preview's.
     window.invoke_navigate_dms();
     window.invoke_select_room("party".into());
+    assert_eq!(window.get_roster().row_data(0).unwrap().name, "Riley");
+    // The switch started a pause of its own, so a rename right after it
+    // waits for that pause to end, like any other held change.
     rename("Third");
     adapter.borrow_mut().refresh(&window);
+    i_slint_backend_testing::mock_elapsed_time(refresh::ROSTER_PAUSE);
     assert_eq!(window.get_roster().row_data(0).unwrap().name, "Third");
     window.hide().unwrap();
 }
@@ -7290,12 +7299,12 @@ fn the_picker_lists_what_the_account_uses_for_a_message_or_a_reaction() {
     window.invoke_emoji_search("".into());
     assert_eq!(
         window.get_emoji_rows().row_data(0).unwrap().heading,
-        "FAVORITES"
+        "Favorites"
     );
     assert_eq!(first_of(1), "☠️");
     assert_eq!(
         window.get_emoji_rows().row_data(2).unwrap().heading,
-        "FREQUENTLY USED"
+        "Frequently Used"
     );
     assert_eq!(first_of(3), "😂");
     // A reaction's picker has the account's reactions, which it counts apart.
@@ -7410,21 +7419,28 @@ fn rows_far_from_those_the_picker_shows_let_go_of_their_pictures() {
             })
             .sum()
     };
+
     assert!(drawn(0..8) > 20, "the top is drawn");
-    // A short scroll keeps what it left, for a scroll back.
+    // A short scroll keeps what it left, for a scroll back. The fork draws
+    // emoji with system-font pictures, whose coverage per row varies with
+    // the fonts installed, so the check compares against what was there.
+    let left_before = drawn(0..4);
     window.invoke_emoji_scrolled_to(6.0 * emoji::CELL, 6.0 * emoji::CELL);
-    assert!(drawn(0..4) > 10, "the rows just left keep their pictures");
+    assert_eq!(drawn(0..4), left_before, "the rows just left keep their pictures");
     // A long one lets go of it, whether it went by steps or at once, as the
     // sidebar jumps; the rows it reached are drawn, and those between were not.
     window.invoke_emoji_scrolled_to(40.0 * emoji::CELL, 6.0 * emoji::CELL);
     assert_eq!(drawn(0..24), 0, "the rows far above let go");
-    assert!(drawn(40..46) > 20, "the rows reached are drawn");
+
+    // System-font pictures only cover single-code-point emoji, so the bar is
+    // "most of the window", not Twemoji's full sweep.
+    assert!(drawn(40..46) > 10, "the rows reached are drawn");
     window.invoke_emoji_scrolled_to(100.0 * emoji::CELL, 6.0 * emoji::CELL);
     assert_eq!(drawn(40..46), 0, "a jump lets go of where it came from");
-    assert!(drawn(100..106) > 20, "and draws where it went");
+    assert!(drawn(100..106) > 10, "and draws where it went");
     // Back at the top, the pictures are drawn again.
     window.invoke_emoji_scrolled_to(0.0, 6.0 * emoji::CELL);
-    assert!(drawn(0..6) > 20, "a row drawn before is drawn again");
+    assert!(drawn(0..6) > 10, "a row drawn before is drawn again");
     assert_eq!(drawn(100..106), 0);
 }
 

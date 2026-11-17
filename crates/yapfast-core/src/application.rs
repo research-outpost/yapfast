@@ -2172,7 +2172,7 @@ fn pictures_on_screen<'a>(
         .chain(
             state
                 .scoped_rooms()
-                .filter(move |_| rooms)
+                .filter(move |_| list_avatars)
                 .filter_map(|room| room.avatar.as_deref())
                 .take(LISTED_PICTURES),
         )

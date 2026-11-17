@@ -626,7 +626,12 @@ mod tests {
         let list = format!(
             "# copied\r\nfile://{encoded}\r\nfile://localhost{encoded}\r\nhttps://example.com/a.png\r\nfile:///no/such/file\r\n"
         );
+        // A Windows Explorer drop arrives as CF_HDROP, not a uri-list, and
+        // these paths do not start with /: only a unix build reads one.
+        #[cfg(unix)]
         assert_eq!(files(&list), vec![file.clone(), file]);
+        #[cfg(not(unix))]
+        let _ = (&list, &file);
         assert_eq!(percent_decode("%zz"), None);
     }
 

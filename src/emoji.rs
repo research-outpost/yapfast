@@ -738,10 +738,11 @@ mod tests {
         assert_eq!(all[1].cells.row_count(), 1);
         assert_eq!(all[2].heading, "Smileys & emotion");
         assert!(all.iter().all(|row| row.cells.row_count() <= columns(408.)));
-        // The sidebar jumps to each heading; a section ends where the next begins.
-        assert_eq!(sections.len(), 2 + emojis::Group::iter().count());
+        // The sidebar jumps to each heading; a section ends where the next
+        // begins. No favorites are passed here, so only Frequently Used heads.
+        assert_eq!(sections.len(), 1 + emojis::Group::iter().count());
         assert_eq!((sections[0].row, sections[0].end), (0, 2));
-        assert_eq!(sections[2].icon.name, "Smileys & emotion");
+        assert_eq!(sections[1].icon.name, "Smileys & emotion");
         for (section, next) in sections.iter().zip(&sections[1..]) {
             assert!(!all[section.row as usize].heading.is_empty());
             assert_eq!(section.end, next.row);
