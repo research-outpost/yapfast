@@ -23,16 +23,16 @@ import "fonts/AtkinsonHyperlegibleNext-ExtraBold.ttf";
 // settings.slint, people.slint, friends.slint, dialogs.slint and sign-in.slint.
 import { Palette } from "std-widgets.slint";
 import { ListView, Autoscroll, AutoscrollMarker } from "scrollview.slint";
-import { Theme, Tip, ReactionHover, Middle, Popup, PopupMotion } from "theme.slint";
+import { Theme, Tip, ReactionHover, Middle, Popup, PopupMotion , Badges } from "theme.slint";
 import { TitleBar, ResizeEdges } from "title_bar.slint";
-import { GifPicker, GifTile, PickerTab } from "gifs.slint";
-import { ActionButton, IconButton, PingToggle, DeviceToggle, Avatar, TextField, MessagesSkeleton, ContextMenu, MenuItem, MenuRow, HeaderToggle, Banner, StatusText, QuickDeviceMenu, PictureStore } from "controls.slint";
-import { PersonRow, CallLink, CallLinkCard, LinkTouch, SignalIcon, VoiceDock, StreamPip, CallInvite, JoinVoice, ParticipantGrid, CallControls, IncomingCall, SwitchDialog, InputLevel, ShareMenu, ShareScreen, VolumeMenu, Soundboard, SoundRow } from "voice.slint";
-import { ServerRow, RoomRow, StatusDot, ServerRail, ServerHeader, RoomList, VoiceCardView } from "rail.slint";
+import { GifPicker, GifTile, PickerTab , GifFavorites } from "gifs.slint";
+import { ActionButton, IconButton, PingToggle, DeviceToggle, Avatar, TextField, MessagesSkeleton, ContextMenu, MenuItem, MenuRow, HeaderToggle, Banner, StatusText, QuickDeviceMenu, PictureStore , ActivityClock, Motion } from "controls.slint";
+import { PersonRow, CallLink, CallLinkCard, LinkTouch, SignalIcon, VoiceDock, StreamPip, CallInvite, JoinVoice, ParticipantGrid, CallControls, IncomingCall, SwitchDialog, InputLevel, ShareMenu, ShareScreen, VolumeMenu, Soundboard, SoundRow , VoiceCard } from "voice.slint";
+import { ServerRow, RoomRow, StatusDot, ServerRail, ServerHeader, RoomList, VoiceCardView , FolderServer } from "rail.slint";
 import { StagedFile, StagedTile, Composer, MentionRow, MentionList, EmojiSuggestions, RequestBar } from "composer.slint";
-import { EmojiCell, EmojiRow, EmojiSection, MessageRow, ReactionToggle, EmojiButton, EmojiPicker, MessageMenu, MessageGallery, MessageStickers, FileCard, MessageContent, EmbedView, BotTag, NoConversation, ConversationStart, HistoryEdge, UnreadBar, PresentBar, ImageViewer, VideoViewer, VideoPlayer, Polls, VoicePlayer } from "messages.slint";
-import { SettingsRow, SettingsScreen, AccountSettings, AppearanceSettings, ThemeCard, ThemeColour, VoiceSettings, MessageSettings, NotificationSettings, SoundSettings, AdvancedSettings, DiscordLinkSettings, DiscordSettings, BlockedRow, GameActivitySettings, GameExecutable } from "settings.slint";
-import { MemberRow, ProfileData, ProfileServerRow, MemberPanel, ProfileCard, ServerCard, RoleCard } from "people.slint";
+import { EmojiCell, EmojiRow, EmojiSection, MessageRow, ReactionToggle, EmojiButton, EmojiPicker, MessageMenu, MessageGallery, MessageStickers, FileCard, MessageContent, EmbedView, BotTag, NoConversation, ConversationStart, HistoryEdge, UnreadBar, PresentBar, ImageViewer, VideoViewer, VideoPlayer, Polls, VoicePlayer , CardButton, CardButtonStyle, CardRow, CardRowKind, ComponentCard, EmbedCard, EmbedField, EmbedFieldRow, EmojiFavorites, FileCell, ImageCell, MessageStickerCard, MessageStickerCardView, PollAction, PollAnswerRow, PollCard, RailSection, ReactionChip, TextBlock } from "messages.slint";
+import { Choices, SettingsRow, SettingsScreen, AccountSettings, AppearanceSettings, ThemeCard, ThemeColour, VoiceSettings, MessageSettings, NotificationSettings, SoundSettings, AdvancedSettings, DiscordLinkSettings, DiscordSettings, BlockedRow, GameActivitySettings, GameExecutable } from "settings.slint";
+import { MemberRow, ProfileData, ProfileServerRow, MemberPanel, ProfileCard, ServerCard, RoleCard , ActivityRow, ProfileFriendRow, ProfileRole, ProfileRoleRow } from "people.slint";
 import { RequestRow, FriendRow, FriendsScreen, HeaderTab, RequestsScreen, AddFriendDialog } from "friends.slint";
 import { ContactRow, PlaceRow, ReactionPill, ReactorRow, StatusDialog, NewDmDialog, ForwardDialog, QuickSwitcher, ReactionsDialog, StatusMenu, PersonPrompt, PersonDialog, LeavingDialog, PollAnswerDraft, PollDialog } from "dialogs.slint";
 import { InvitePrompt, InviteDialog, JoinPrompt, JoinDialog, EventPrompt, EventDialog, GiftPrompt, GiftDialog, OAuthPrompt, OAuthDialog, ChannelPrompt, ChannelDialog, ProfileEditorPrompt, ProfileEditorDialog } from "server.slint";
@@ -1551,6 +1551,15 @@ export component YapfastWindow inherits Window {
     // Another server's channels take the place of the row a voice card was
     // beside, and a dialog or screen over the window covers it.
     changed sidebar-title => { VoiceCard.people = []; }
+    /// Whether something covers the composer: its shortcuts stand down
+    /// while the settings, a card or a dialog is up. Fork note: the 0.4.1
+    /// definition minus the un-taken emoji-card and tag-card states.
+    property <bool> composer-covered: root.settings-open || root.server-settings-open
+        || root.channel-settings-open || root.profile-editor-open || root.profile-open
+        || root.role-open || root.server-card-open || root.topic-open
+        || root.pins-open || root.threads-open || root.add-people-open || root.viewer-open
+        || (VideoPlayer.expanded && VideoPlayer.item != "") || root.stage-full;
+
     changed composer-covered => {
         if self.composer-covered { VoiceCard.people = []; }
     }
