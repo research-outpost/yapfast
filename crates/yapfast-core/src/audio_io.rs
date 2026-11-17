@@ -9,7 +9,12 @@
 //! Linux goes through PulseAudio, or PipeWire's PulseAudio server, and
 //! Windows through WASAPI. Other systems have no sound here yet.
 
-use std::{marker::PhantomData, time::Duration};
+use std::{
+    collections::HashMap,
+    marker::PhantomData,
+    sync::Mutex,
+    time::{Duration, Instant},
+};
 #[cfg(feature = "discord")]
 use std::{
     sync::{Arc, atomic::AtomicBool},
@@ -213,6 +218,38 @@ fn bytes_mut<S: Sample>(samples: &mut [S]) -> &mut [u8] {
     unsafe { std::slice::from_raw_parts_mut(samples.as_mut_ptr().cast(), size_of_val(samples)) }
 }
 
+/// How often one repeated fallback still gets a log line.
+const EVERY: Duration = Duration::from_secs(60);
+
+/// When each `stream`/`error` fallback was logged last, and how many since.
+static WARNED: Mutex<Option<HashMap<(String, String), (Instant, u32)>>> = Mutex::new(None);
+
+/// Whether a stream's fallback to the default speakers is due a log line, and
+/// how many identical ones it skipped. The first of a stream's failures logs
+/// at once; repeats of the same one at most once a minute, so a device that
+/// went away costs the log no more than a line per minute while sounds keep
+/// playing on it.
+fn due(name: &'static str, error: &str, at: Instant) -> Option<u32> {
+    let mut held = WARNED.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    let seen = held.get_or_insert_with(HashMap::default);
+    let key = (name.to_owned(), error.to_owned());
+    match seen.get_mut(&key) {
+        None => {
+            seen.insert(key, (at, 0));
+            Some(0)
+        }
+        Some((then, skipped)) => {
+            if at.duration_since(*then) < EVERY {
+                *skipped += 1;
+                None
+            } else {
+                *then = at;
+                Some(std::mem::replace(skipped, 0))
+            }
+        }
+    }
+}
+
 /// Speakers Yapfast plays to, until dropped.
 pub struct Output<S: Sample> {
     stream: platform::Output,
@@ -248,11 +285,15 @@ impl<S: Sample> Output<S> {
     ) -> Result<Self> {
         match Self::open(speaker, name, rate, channels, queue) {
             Err(error) if speaker.is_some() => {
-                tracing::warn!(
-                    error = format!("{error:#}"),
-                    stream = name,
-                    "playing on the default speakers"
-                );
+                let error = format!("{error:#}");
+                if let Some(skipped) = due(name, &error, Instant::now()) {
+                    tracing::warn!(
+                        error,
+                        stream = name,
+                        skipped,
+                        "playing on the default speakers"
+                    );
+                }
                 Self::open(None, name, rate, channels, queue)
             }
             opened => opened,
@@ -373,6 +414,21 @@ mod tests {
         assert_eq!(video.bytes(Duration::from_millis(100)), 38_400);
         let meter = Format::of::<i16>(16_000, 1);
         assert_eq!(meter.bytes(Duration::from_millis(20)), 640);
+    }
+
+    #[test]
+    fn repeated_fallbacks_are_clamped() {
+        let start = Instant::now();
+        // The first failure of a stream gets a line to itself.
+        assert_eq!(due("Clamp a", "gone", start), Some(0));
+        // Repeats of the same one hold their peace, counting up.
+        assert_eq!(due("Clamp a", "gone", start + Duration::from_secs(20)), None);
+        assert_eq!(due("Clamp a", "gone", start + Duration::from_secs(40)), None);
+        // A minute in, the line says how many it skipped.
+        assert_eq!(due("Clamp a", "gone", start + Duration::from_secs(60)), Some(2));
+        // Another stream, or another error, is a line of its own.
+        assert_eq!(due("Clamp b", "gone", start), Some(0));
+        assert_eq!(due("Clamp a", "busy", start), Some(0));
     }
 
     /// Plays a tone on the default speakers and hears it on the default
