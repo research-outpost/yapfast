@@ -1,5 +1,11 @@
 use super::*;
 
+// Fork note: 0.4.1's helper turns off the ClientStyle global, which this
+// fork never took -- every window is the classic one here.
+fn classic_window() -> YapfastWindow {
+    YapfastWindow::new().unwrap()
+}
+
 fn message_row_plain(message: &ChatMessage) -> MessageRow {
     message_row(message, &HashSet::new())
 }
