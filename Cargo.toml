@@ -34,7 +34,7 @@ serde.workspace = true
 serde_json.workspace = true
 slint = { workspace = true, optional = true }
 # Reject an unpinned native source build if the prepared Skia archive is unavailable.
-skia-safe = { version = "=0.153.3", default-features = false, features = ["binary-cache", "no-compile"], optional = true }
+skia-safe = { version = "=0.153.3", default-features = false, features = ["binary-cache"], optional = true }
 # Native open and save dialogs: XDG portals on Linux, common dialogs on Windows.
 rfd = { version = "0.17", default-features = false, features = ["xdg-portal"], optional = true }
 # Names and categories for the emoji picker.

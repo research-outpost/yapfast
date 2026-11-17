@@ -44,7 +44,7 @@ impl RosterShown {
         Self {
             members: members.clone(),
             selection_version,
-            timeout_due: members.as_ref().ok().and_then(|list| {
+            timeout_due: members.as_ref().and_then(|list| list.as_ref().ok()).and_then(|list| {
                 list.iter()
                     .filter_map(|member| member.timed_out_until)
                     .filter(|until| *until > now)

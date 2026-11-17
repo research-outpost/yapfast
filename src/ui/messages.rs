@@ -1208,6 +1208,19 @@ pub(super) fn collapsed(message: &ChatMessage, revealed: &HashSet<String>) -> bo
     message.blocked && !revealed.contains(&format!("{}/blocked", message.item))
 }
 
+/// A default sticker's card: Discord's own packs are usable anywhere.
+const DEFAULT_STICKER: &str = "This is a default sticker. It can be used anywhere.";
+
+/// A server's sticker's card, when the server is one this account can reach.
+const SERVER_STICKER: &str = "This sticker is from one of your servers.";
+
+/// The id of the sticker a message's attachment is, from its picture's
+/// address: `/stickers/{id}.png?size=160`, `.gif` or `.json`.
+fn sticker_id(url: &str) -> Option<&str> {
+    let name = url.rsplit('/').next()?;
+    name.split(['.', '?']).next().filter(|id| !id.is_empty())
+}
+
 /// The card a click on a sticker in a message opens: the sticker, its name as
 /// the message names it, and the server it is from when one of this account's
 /// lists it.
@@ -1244,22 +1257,16 @@ pub(super) fn sticker_card(app: &Application, item: &str, index: usize) -> Messa
         .preview
         .as_ref()
         .map_or_else(Default::default, pictures::animation);
-    // What Discord said of the server, as the emoji card has it.
-    let preview = server.and_then(|server| app.state.server_previews.get(&server.id));
-    let discoverable = preview.map_or_else(
-        || server.is_some_and(|server| server.community),
-        |preview| preview.discoverable,
-    );
+    // shortcut: no server previews in this fork (#128 not taken), so the
+    // community flag answers; upgrade if previews are backported.
+    let discoverable = server.is_some_and(|server| server.community);
     MessageStickerCard {
         name: attachment.name.as_str().into(),
         picture_url: url.into(),
         picture: still.unwrap_or_default(),
         frames,
         delays,
-        server_online: preview
-            .and_then(|preview| preview.online)
-            .map_or_else(String::new, |online| format!("{} Online", grouped(online)))
-            .into(),
+        server_online: String::default().into(),
         server_note: if discoverable {
             "Discoverable Server"
         } else {

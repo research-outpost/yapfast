@@ -1362,7 +1362,14 @@ fn a_voice_messages_waveform_moves_it_where_pressed_and_dragged() {
 }
 
 #[test]
-  // The link starts after "See ", a little way into the text column.
+fn a_click_on_a_link_in_selectable_text_opens_it() {
+    use slint::platform::{PointerEventButton, WindowEvent};
+    let window = one_message("See https://example.com/yapfast");
+    let opened = Rc::new(RefCell::new(Vec::<String>::new()));
+    let record = opened.clone();
+    window.on_open_link(move |link| record.borrow_mut().push(link.into()));
+    let button = PointerEventButton::Left;
+    // The link starts after "See ", a little way into the text column.
     for y in (100..700).step_by(4) {
         let position = slint::LogicalPosition::new(440., y as f32);
         window
@@ -1403,33 +1410,25 @@ fn a_link_showing_other_text_asks_before_it_opens() {
     assert!(
         opened
             .iter()
-            .all(|link| link == "yapfast:leave/https://evil.e    // stickers, then Discord's packs, which are Nitro's and so locked.
-.com/yapfast](https://evil.example/yapfast)");
-    let button = PointerEventButton::Right;
-    let mut found = 0;
-    for y in (100..700).step_by(4) {
-        let position = slint::LogicalPosition::new(440., y as f32);
-        window
-            .window()
-            .dispatch_event(WindowEvent::PointerPressed { position, button });
-        window
-            .window()
-            .dispatch_event(WindowEvent::PointerReleased { position, button });
-        let at = |x: f32| {
-            i_slint_core::yapfas        [false, true, true, false],
-        "the server's are usable here; Discord's packs need Nitro, those before them too"
+            .all(|link| link == "yapfast:leave/https://evil.example/yapfast"),
+        "{opened:?}"
+    );
 }
-    }
-    assert!(found > 0, "a right press on the link records it");
-    assert_eq!(
-        callbacks::web_address("yapfast:leave/https://evil.example/y    let shown: Vec<(String, bool)> = (0..sections.row_count())
-        .filter_map(|row| sections.row_data(row))
-        .map(|section| (section.name.to_string(), section.clock))
-entButton, WindowEvent};
-    let window = one_message("Thinking             ("Frequently Used".to_string(), true),
-            ("Server".to_string(), false),
-            ("Wumpus".to_string(), false),
-Event::KeyReleased { text: key.into() });
+
+#[test]
+#[test]
+fn styled_messages_select_by_dragging_and_copy_as_plain_text() {
+    use slint::platform::{Key, PointerEventButton, WindowEvent};
+    let window = one_message("Thinking **co-op** after nine, if people are up for it.");
+    let dispatch = |event| window.window().dispatch_event(event);
+    let button = PointerEventButton::Left;
+    let at = |x, y| slint::LogicalPosition::new(x, y);
+    let ctrl = |key: &str| {
+        dispatch(WindowEvent::KeyPressed {
+            text: Key::Control.into(),
+        });
+        dispatch(WindowEvent::KeyPressed { text: key.into() });
+        dispatch(WindowEvent::KeyReleased { text: key.into() });
         dispatch(WindowEvent::KeyReleased {
             text: Key::Control.into(),
         });
@@ -1462,12 +1461,14 @@ Event::KeyReleased { text: key.into() });
     // Without element lookups in this build, drag down the timeline row by
     // row: from right of the text, past its end, to left of the timeline,
     // past its start. A drag that lands on the message selects all of it,
-    // an            banner: None,
-            verified: false,
-            events: Vec::new(),
-            boosts: None,
-            tag: None,
-y),
+    // and copies it.
+    for y in (100..700).step_by(4) {
+        let y = y as f32;
+        dispatch(WindowEvent::PointerMoved {
+            position: at(900., y),
+        });
+        dispatch(WindowEvent::PointerPressed {
+            position: at(900., y),
             button,
         });
         dispatch(WindowEvent::PointerMoved {
@@ -1491,7 +1492,6 @@ y),
         "Thinking co-op after nine, if people are up for it."
     );
 }
-
 #[test]
 fn pointer_input_reaches_navigation_buttons() {
     i_slint_backend_testing::init_no_event_loop();

@@ -334,12 +334,8 @@ pub(super) fn bind_callbacks(window: &YapfastWindow, adapter: &Rc<RefCell<Adapte
             let index = index.max(0) as usize;
             adapter.sticker_card = Some((item.clone(), index));
             let card = messages::sticker_card(&adapter.app, &item, index);
-            let server = card.server.to_string();
             window.set_sticker_card(card);
             window.set_sticker_card_open(true);
-            if !server.is_empty() {
-                adapter.action(&window, Action::PreviewServer(server));
-            }
         });
     }
     {
