@@ -331,7 +331,7 @@ mod tests {
         Release {
             version: version(tag),
             tag: tag.into(),
-            page: format!("https://github.com/yapfast/yapfast/releases/tag/{tag}"),
+            page: format!("https://github.com/research-outpost/yapfast/releases/tag/{tag}"),
             assets: Vec::new(),
         }
     }
@@ -369,7 +369,7 @@ mod tests {
     fn a_listing_leaves_out_drafts_and_odd_tags() {
         let json = br#"[
             {"tag_name": "v0.4.0", "draft": false, "prerelease": false,
-             "html_url": "https://github.com/yapfast/yapfast/releases/tag/v0.4.0",
+             "html_url": "https://github.com/research-outpost/yapfast/releases/tag/v0.4.0",
              "assets": [{"name": "SHA256SUMS.txt", "browser_download_url": "https://example.test/sums", "size": 12}]},
             {"tag_name": "v0.5.0", "draft": true, "html_url": ""},
             {"tag_name": "preview", "draft": false, "html_url": ""},
@@ -381,12 +381,12 @@ mod tests {
         assert_eq!(releases[0].assets[0].size, 12);
         assert_eq!(
             releases[0].page,
-            "https://github.com/yapfast/yapfast/releases/tag/v0.4.0"
+            "https://github.com/research-outpost/yapfast/releases/tag/v0.4.0"
         );
         // A page elsewhere isn't opened.
         assert_eq!(
             releases[1].page,
-            "https://github.com/yapfast/yapfast/releases/tag/v0.5.0-nightly.20261107.12"
+            "https://github.com/research-outpost/yapfast/releases/tag/v0.5.0-nightly.20261107.12"
         );
         assert!(parse_releases(b"{\"message\": \"rate limited\"}").is_err());
     }

@@ -7738,3 +7738,30 @@ fn a_voice_channels_time_reads_on_the_activity_clock() {
     assert_eq!(profile::clock_interval(false, false), None);
 }
 
+/// Settings' About page names the build, and asks GitHub nothing until the
+/// check is turned on.
+#[test]
+fn the_about_page_names_the_build_and_checks_nothing_until_told() {
+    i_slint_backend_testing::init_no_event_loop();
+    let window = YapfastWindow::new().unwrap();
+    window
+        .global::<BuildInfo>()
+        .set_headline("Yapfast v0.3.0-fork.1".into());
+    window.global::<BuildInfo>().set_channel("Stable".into());
+    window
+        .global::<BuildInfo>()
+        .set_summary("Yapfast v0.3.0-fork.1 \u{b7} Stable".into());
+    window.set_settings_open(true);
+    window.set_settings_section(9);
+    let updates = window.global::<Updates>();
+    assert!(!updates.get_check(), "the check is off until it's turned on");
+    assert_eq!(updates.get_status(), UpdateStatus::Idle);
+    window.show().unwrap();
+    window
+        .window()
+        .set_size(slint::LogicalSize::new(1120., 760.));
+    // The settings card fades in; let the animation finish.
+    i_slint_backend_testing::mock_elapsed_time(Duration::from_millis(1000));
+    assert_eq!(window.get_settings_section(), 9, "About stays shown");
+    window.hide().unwrap();
+}
