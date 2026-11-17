@@ -1422,7 +1422,6 @@ fn a_link_showing_other_text_asks_before_it_opens() {
 }
 
 #[test]
-#[test]
 fn styled_messages_select_by_dragging_and_copy_as_plain_text() {
     use slint::platform::{Key, PointerEventButton, WindowEvent};
     let window = one_message("Thinking **co-op** after nine, if people are up for it.");
