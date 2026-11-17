@@ -23,6 +23,92 @@ impl Changes {
     }
 }
 
+/// What the member list showed last, so it's built again only once that
+/// changes.
+pub(super) struct RosterShown {
+    /// The people it showed, whole: a new list of the same people is new.
+    members: Option<Result<Vec<yapfast_core::chat::ChatMember>, &'static str>>,
+    /// The conversation it was built for.
+    selection_version: u64,
+    /// When one of its rows' timed-out flag turns next, None when none
+    /// waits: past it the rows wait to be built again.
+    timeout_due: Option<u64>,
+}
+
+impl RosterShown {
+    fn of(
+        members: &Option<Result<Vec<yapfast_core::chat::ChatMember>, &'static str>>,
+        selection_version: u64,
+        now: u64,
+    ) -> Self {
+        Self {
+            members: members.clone(),
+            selection_version,
+            timeout_due: members.as_ref().ok().and_then(|list| {
+                list.iter()
+                    .filter_map(|member| member.timed_out_until)
+                    .filter(|until| *until > now)
+                    .min()
+            }),
+        }
+    }
+}
+
+/// The member list's rows: one per member, each group's heading inside the
+/// first row of the group, as the list has always drawn them.
+fn roster_rows(
+    members: &Option<Result<Vec<yapfast_core::chat::ChatMember>, &'static str>>,
+    now: u64,
+) -> Vec<MemberRow> {
+    let members = match members {
+        Some(Ok(members)) => members.as_slice(),
+        _ => &[],
+    };
+    members
+        .iter()
+        .enumerate()
+        .map(|(index, member)| {
+            let (activity, activity_emoji) = activity_line(member.activity.as_deref());
+            MemberRow {
+                id: member.id.clone().into(),
+                name: member.name.clone().into(),
+                initial: initial(&member.name),
+                tint: tint(&member.name),
+                picture: slint::Image::default(),
+                picture_url: member.avatar.as_deref().unwrap_or_default().into(),
+                timed_out: member.timed_out_until.is_some_and(|until| until > now),
+                presence: presence_name(member.presence).into(),
+                color: role_color(member.color),
+                has_color: member.color.is_some(),
+                // One line under the name, as Discord shows it.
+                activity,
+                activity_emoji,
+                // Discord names its groups; Matrix members group by role.
+                heading: if let Some(group) = &member.group {
+                    if index == 0 || members[index - 1].group.as_ref() != Some(group) {
+                        group.to_uppercase().into()
+                    } else {
+                        SharedString::default()
+                    }
+                } else if index == 0 || members[index - 1].role != member.role {
+                    let count = members
+                        .iter()
+                        .filter(|other| other.role == member.role)
+                        .count();
+                    let role = match member.role {
+                        Role::Admin => "ADMINS",
+                        Role::Moderator => "MODERATORS",
+                        Role::Member => "MEMBERS",
+                    };
+                    format!("{role} — {count}").into()
+                } else {
+                    SharedString::default()
+                },
+            }
+        })
+        .collect()
+}
+
 /// What a backend event can change on screen.
 #[derive(Clone, Copy, Default)]
 pub(super) struct Reach {
@@ -81,6 +167,13 @@ impl Reach {
 
 /// How long a picture that arrived waits for others to show with it.
 const PICTURE_BATCH: std::time::Duration = std::time::Duration::from_millis(100);
+
+/// How long a member list stays as built while its people change: in a busy
+/// server someone comes, goes or changes what they're doing several times a
+/// second, and each change drew a frame. So the list shows at most two
+/// changes a second, the first at once and those in the pause after it
+/// together at its end.
+pub(super) const ROSTER_PAUSE: std::time::Duration = std::time::Duration::from_millis(500);
 
 impl Adapter {
     /// Browse Channels' rows whose channel's name has its search in it, each
@@ -1541,67 +1634,49 @@ impl Adapter {
 
     /// The member list, the reactions offered on messages, and a role's card.
     fn show_members(&mut self, window: &YapfastWindow) {
-        let state = &self.app.state;
         let now = yapfast_core::clock::now_ms();
-        let members = match &state.members {
-            Some(Ok(members)) => members.as_slice(),
-            _ => &[],
+        let selection = self.app.state.selection_version;
+        // The same conversation's people, changed within the pause after the
+        // list was built, wait for its end; see `ROSTER_PAUSE`.
+        let held = self.roster_shown.as_ref().filter(|shown| {
+            self.roster_due.running()
+                && shown.selection_version == selection
+                && matches!((&shown.members, &self.app.state.members), (Some(Ok(_)), Some(Ok(_))))
+                && shown.members != self.app.state.members
+        });
+        self.roster_held |= held.is_some();
+        let shown_members = match held {
+            Some(shown) => shown.members.clone(),
+            None => self.app.state.members.clone(),
         };
-        window.set_roster_note(
-            match &state.members {
-                None => "Loading members...",
-                Some(Err(error)) => *error,
-                Some(Ok(members)) if members.is_empty() => "No one else has joined yet.",
-                Some(Ok(_)) => "",
-            }
-            .into(),
-        );
-        update_model(
-            &self.models.roster,
-            members
-                .iter()
-                .enumerate()
-                .map(|(index, member)| {
-                    let (activity, activity_emoji) = activity_line(member.activity.as_deref());
-                    MemberRow {
-                        id: member.id.clone().into(),
-                        name: member.name.clone().into(),
-                        initial: initial(&member.name),
-                        tint: tint(&member.name),
-                        picture: slint::Image::default(),
-                        picture_url: member.avatar.as_deref().unwrap_or_default().into(),
-                        timed_out: member.timed_out_until.is_some_and(|until| until > now),
-                        presence: presence_name(member.presence).into(),
-                        color: role_color(member.color),
-                        has_color: member.color.is_some(),
-                        // One line under the name, as Discord shows it.
-                        activity,
-                        activity_emoji,
-                        // Discord names its groups; Matrix members group by role.
-                        heading: if let Some(group) = &member.group {
-                            if index == 0 || members[index - 1].group.as_ref() != Some(group) {
-                                group.to_uppercase().into()
-                            } else {
-                                SharedString::default()
-                            }
-                        } else if index == 0 || members[index - 1].role != member.role {
-                            let count = members
-                                .iter()
-                                .filter(|other| other.role == member.role)
-                                .count();
-                            let role = match member.role {
-                                Role::Admin => "ADMINS",
-                                Role::Moderator => "MODERATORS",
-                                Role::Member => "MEMBERS",
-                            };
-                            format!("{role} — {count}").into()
-                        } else {
-                            SharedString::default()
-                        },
+        let list = self.roster_shown.as_ref().map_or(true, |shown| {
+            shown.members != shown_members || shown.timeout_due.is_some_and(|due| due <= now)
+        });
+        if list {
+            window.set_roster_note(
+                match &shown_members {
+                    None => "Loading members...",
+                    Some(Err(error)) => *error,
+                    Some(Ok(members)) if members.is_empty() => "No one else has joined yet.",
+                    Some(Ok(_)) => "",
+                }
+                .into(),
+            );
+            update_model(&self.models.roster, roster_rows(&shown_members, now));
+            self.roster_held = false;
+            let (adapter, weak) = (self.weak.clone(), window.as_weak());
+            self.roster_due
+                .start(slint::TimerMode::SingleShot, ROSTER_PAUSE, move || {
+                    if let (Some(adapter), Some(window)) = (adapter.upgrade(), weak.upgrade()) {
+                        let mut adapter = adapter.borrow_mut();
+                        if adapter.roster_held {
+                            adapter.show_members(&window);
+                        }
                     }
-                })
-                .collect(),
-        );
+                });
+            self.roster_shown = Some(RosterShown::of(&shown_members, selection, now));
+        }
+        let state = &self.app.state;
         let scale = window.window().scale_factor();
         update_model(
             &self.models.bar_reactions,

@@ -1627,6 +1627,15 @@ struct Adapter {
     aside_restyle: bool,
     /// What the sidebar showed last, so it's built again only once that changes.
     sidebar: Option<SidebarShown>,
+    /// What the member list showed last, so it's built again only once that
+    /// changes.
+    roster_shown: Option<refresh::RosterShown>,
+    /// Runs for [`refresh::ROSTER_PAUSE`] after the member list was built;
+    /// see `show_members`.
+    roster_due: slint::Timer,
+    /// Whether the member list changed while `roster_due` ran, to show once
+    /// it ends.
+    roster_held: bool,
     /// What the quick switcher listed last, while it's open.
     switcher: Option<SwitcherShown>,
     /// The room ids of the rows a Discord server's channel list drags and
@@ -1880,6 +1889,9 @@ impl Adapter {
                 messages: Arc::new(Vec::new()),
                 rows: Vec::new(),
                 sidebar: None,
+                roster_shown: None,
+                roster_due: slint::Timer::default(),
+                roster_held: false,
                 switcher: None,
                 places: Vec::new(),
                 arranging: None,

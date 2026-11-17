@@ -2579,6 +2579,54 @@ fn the_member_list_shows_for_text_channels_and_remembers_being_closed() {
 }
 
 #[test]
+fn the_member_list_shows_a_change_then_holds_changes_for_half_a_second() {
+    i_slint_backend_testing::init_no_event_loop();
+    let directory = tempfile::tempdir().unwrap();
+    let window = YapfastWindow::new().unwrap();
+    let adapter = Adapter::new(
+        Arc::new(BackgroundRuntime::new().unwrap()),
+        directory.path().into(),
+        &window,
+    )
+    .unwrap();
+    bind_callbacks(&window, &adapter);
+    window.invoke_explore_preview();
+    window.show().unwrap();
+    window
+        .window()
+        .set_size(slint::LogicalSize::new(1120., 760.));
+    let rename = |name: &str| {
+        let mut adapter = adapter.borrow_mut();
+        let Some(Ok(members)) = &mut adapter.app.state.members else {
+            panic!("the preview has people");
+        };
+        members[0].name = name.to_owned();
+    };
+    // The first change shows at once.
+    rename("Marked");
+    adapter.borrow_mut().refresh(&window);
+    assert_eq!(window.get_roster().row_data(0).unwrap().name, "Marked");
+    // A change within the pause after that waits for its end, so a busy
+    // server's list draws at most twice a second.
+    rename("Second");
+    adapter.borrow_mut().refresh(&window);
+    assert_eq!(
+        window.get_roster().row_data(0).unwrap().name,
+        "Marked",
+        "the pause holds it"
+    );
+    i_slint_backend_testing::mock_elapsed_time(refresh::ROSTER_PAUSE);
+    assert_eq!(window.get_roster().row_data(0).unwrap().name, "Second");
+    // Switching conversations shows at once: the pause was the preview's.
+    window.invoke_navigate_dms();
+    window.invoke_select_room("party".into());
+    rename("Third");
+    adapter.borrow_mut().refresh(&window);
+    assert_eq!(window.get_roster().row_data(0).unwrap().name, "Third");
+    window.hide().unwrap();
+}
+
+#[test]
 fn forwarding_and_frequent_reactions_reach_the_window() {
     i_slint_backend_testing::init_no_event_loop();
     let directory = tempfile::tempdir().unwrap();
