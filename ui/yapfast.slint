@@ -28,7 +28,7 @@ import { TitleBar, ResizeEdges } from "title_bar.slint";
 import { GifPicker, GifTile, PickerTab , GifFavorites } from "gifs.slint";
 import { ActionButton, IconButton, PingToggle, DeviceToggle, Avatar, TextField, MessagesSkeleton, ContextMenu, MenuItem, MenuRow, HeaderToggle, Banner, StatusText, QuickDeviceMenu, PictureStore , ActivityClock, Motion } from "controls.slint";
 import { PersonRow, CallLink, CallLinkCard, LinkTouch, SignalIcon, VoiceDock, StreamPip, CallInvite, JoinVoice, ParticipantGrid, CallControls, IncomingCall, SwitchDialog, InputLevel, ShareMenu, ShareScreen, VolumeMenu, Soundboard, SoundRow , VoiceCard } from "voice.slint";
-import { ServerRow, RoomRow, StatusDot, ServerRail, ServerHeader, RoomList, VoiceCardView , FolderServer } from "rail.slint";
+import { ServerRow, RoomRow, StatusDot, ServerRail, ServerHeader, RoomList, VoiceCardView, ServerVoiceCard, ServerVoiceCardView , FolderServer } from "rail.slint";
 import { StagedFile, StagedTile, Composer, MentionRow, MentionList, EmojiSuggestions, RequestBar } from "composer.slint";
 import { EmojiCell, EmojiRow, EmojiSection, MessageRow, ReactionToggle, EmojiButton, EmojiPicker, MessageMenu, MessageGallery, MessageStickers, FileCard, MessageContent, EmbedView, BotTag, NoConversation, ConversationStart, HistoryEdge, UnreadBar, PresentBar, ImageViewer, VideoViewer, VideoPlayer, Polls, VoicePlayer , CardButton, CardButtonStyle, CardRow, CardRowKind, ComponentCard, EmbedCard, EmbedField, EmbedFieldRow, EmojiFavorites, FileCell, ImageCell, MessageStickerCard, MessageStickerCardView, PollAction, PollAnswerRow, PollCard, RailSection, ReactionChip, TextBlock } from "messages.slint";
 import { Choices, SettingsRow, SettingsScreen, AccountSettings, AppearanceSettings, ThemeCard, ThemeColour, VoiceSettings, MessageSettings, NotificationSettings, SoundSettings, AdvancedSettings, DiscordLinkSettings, DiscordSettings, BlockedRow, GameActivitySettings, GameExecutable, AboutSettings } from "settings.slint";
@@ -53,7 +53,7 @@ export { Theme, Badges, Popup } from "theme.slint";
 export { BuildInfo, Updates, UpdateStatus } from "build-info.slint";
 export { Autoscroll } from "scrollview.slint";
 export { PersonRow, CallLink, ShareScreen, VoiceCard } from "voice.slint";
-export { ServerRow, RoomRow, FolderServer } from "rail.slint";
+export { ServerRow, RoomRow, FolderServer, ServerVoiceCard, ServerVoicePreview, ServerVoiceRoom, ServerVoicePerson } from "rail.slint";
 export { PictureStore, Motion, ActivityClock } from "controls.slint";
 export { StagedFile, MentionRow } from "composer.slint";
 export { EmojiCell, EmojiRow, EmojiSection, RailSection, EmojiFavorites, MessageStickerCard, MessageStickerCardView, ReactionChip, ImageCell, FileCell, EmbedField, EmbedFieldRow, EmbedCard, CardButtonStyle, CardButton, TextBlock, CardRowKind, CardRow, ComponentCard, MessageRow, VideoPlayer, PollAction, PollAnswerRow, PollCard, Polls, VoicePlayer } from "messages.slint";
@@ -1562,7 +1562,7 @@ export component YapfastWindow inherits Window {
         || (VideoPlayer.expanded && VideoPlayer.item != "") || root.stage-full;
 
     changed composer-covered => {
-        if self.composer-covered { VoiceCard.people = []; }
+        if self.composer-covered { VoiceCard.people = []; ServerVoiceCard.close(); }
     }
     property <bool> profile-docked: root.profile-available && root.profile-panel && root.panel-profile-shown && !root.search-open && !root.aside-docked;
     // Search results take the place of the member list or the profile.
@@ -4262,6 +4262,7 @@ export component YapfastWindow inherits Window {
         drop-shadow-blur: 12px; drop-shadow-color: #00000080; drop-shadow-offset-y: 3px;
         tip-text := Text { text: Tip.text; color: Theme.text; font-size: 14px; font-weight: 700; }
     }
-
+    if VoiceCard.people.length > 0: VoiceCardView { bounds: root.height; bounds-width: root.width; }
+    if ServerVoiceCard.preview.rooms.length > 0: ServerVoiceCardView { bounds: root.height; bounds-width: root.width; }
     if Autoscroll.shown: AutoscrollMarker {}
 }
