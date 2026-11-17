@@ -166,10 +166,6 @@ pub(super) struct Tracker {
     /// The settings' `status`, as Discord last sent it: what a change to the
     /// status, custom status or game sharing starts from.
     status_settings: Option<Arc<[u8]>>,
-    /// Whether Discord lets the account see age-restricted content, and
-    /// whether its settings offer age-restricted commands in DMs.
-    nsfw_allowed: bool,
-    nsfw_commands_in_dms: bool,
     pub(super) playing: Option<Arc<crate::own_activity::Playing>>,
     /// The soundboard's volume and join sounds, from the settings.
     soundboard_volume: Option<f32>,

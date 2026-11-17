@@ -23,10 +23,6 @@ const STATUS_CUSTOM: u64 = 2;
 /// `StatusSettings.show_current_game`, a `BoolValue`: whether the account
 /// shares the game it plays and the Rich Presence games send.
 const STATUS_SHOW_GAME: u64 = 3;
-/// `PreloadedUserSettings.text_and_images`, and in it `view_nsfw_commands`,
-/// a `BoolValue`: age-restricted commands are offered in DMs.
-const TEXT_AND_IMAGES: u64 = 6;
-const VIEW_NSFW_COMMANDS: u64 = 23;
 /// `StatusSettings.status_expires_at_ms`, a `fixed64`, and
 /// `status_created_at_ms`, a `UInt64Value`: when a status set for a while
 /// ends, and when it was set.
@@ -731,7 +727,6 @@ mod tests {
             custom: Some(Some(custom.clone())),
             afk_timeout: None,
             show_game: None,
-            nsfw_commands_in_dms: None,
         };
         assert_eq!(read(&encode_status(&written)), expected);
         let data = base64::engine::general_purpose::STANDARD
@@ -797,24 +792,6 @@ mod tests {
         assert_eq!(read(&encode_status(&cleared)).custom, Some(None));
     }
 
-    #[test]
-    fn reads_whether_age_restricted_commands_are_offered_in_dms() {
-        let encoded = |on: bool| {
-            let mut wrapper = Vec::new();
-            if on {
-                put_varint(&mut wrapper, 1 << 3 | VARINT);
-                put_varint(&mut wrapper, 1);
-            }
-            let mut text = Vec::new();
-            put_bytes(&mut text, VIEW_NSFW_COMMANDS, &wrapper);
-            let mut settings = Vec::new();
-            put_bytes(&mut settings, TEXT_AND_IMAGES, &text);
-            base64::engine::general_purpose::STANDARD.encode(settings)
-        };
-        assert_eq!(read(&encoded(true)).nsfw_commands_in_dms, Some(true));
-        assert_eq!(read(&encoded(false)).nsfw_commands_in_dms, Some(false));
-        assert_eq!(read(&status_only("idle")).nsfw_commands_in_dms, None);
-    }
 
     #[test]
     fn reads_the_server_order_with_folders_in_place() {

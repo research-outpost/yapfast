@@ -6007,15 +6007,6 @@ async function api(req: Request, path: string, origin: string): Promise<Response
   // Alice's settings: Yapfast changes the status, the custom status, the
   // soundboard's volume or the join sounds, which every session hears of.
   // Each top-level field sent replaces hers whole, as on Discord.
-  if (method === "GET" && path === "/content-inventory/users/@me") {
-    feedFetches.push(url.searchParams.get("refresh_token"));
-    return json({
-      request_id: "fake-feed",
-      refresh_token: "fake-feed-token",
-      wait_ms_until_next_fetch: 300_000,
-      entries: env ? [] : feedEntries(url.origin).map((content) => ({ content })),
-    });
-  }
   if (method === "GET" && path === "/users/@me/settings-proto/1") {
     settingsReads++;
     return json({ settings });

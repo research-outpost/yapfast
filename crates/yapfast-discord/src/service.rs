@@ -675,11 +675,6 @@ pub struct Discord {
     /// Discord's own soundboard sounds, once a call asked for them: Discord's
     /// client asks once a session too.
     default_sounds: Arc<tokio::sync::Mutex<Option<Arc<[soundboard::Sound]>>>>,
-    /// The command indexes fetched, until Discord says they changed; see
-    /// [`Self::command_index`].
-    commands: commands::Kept,
-    /// The newest autocomplete, the only one whose answer is wanted.
-    autocompletes: interactions::Autocompletes,
     /// Changes to the status settings on their way; see
     /// [`Self::change_status_settings`].
     status_writes: Arc<StatusWrites>,
@@ -803,8 +798,6 @@ impl Discord {
             application_icons: Arc::default(),
             mfa: Arc::default(),
             default_sounds: Arc::default(),
-            commands: kept_commands,
-            autocompletes: interactions::Autocompletes::default(),
             status_writes: Arc::default(),
         })
     }
