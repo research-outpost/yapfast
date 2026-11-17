@@ -190,6 +190,12 @@ opt-level = 3
 lto = "off"
 strip = true
 
+# Fork note: rustup's pinned 1.97.1 rustc aborts (STATUS_STACK_BUFFER_OVERRUN)
+# optimizing this crate's generated UI code at -O3 on native Windows; -O2
+# compiles it fine and the interface is not where the frames are made.
+[profile.release.package.yapfast-ui]
+opt-level = 2
+
 # Optimized like release, with symbols and incremental builds: for
 # measurements and profiling. Builds people use stay release.
 [profile.measure]
