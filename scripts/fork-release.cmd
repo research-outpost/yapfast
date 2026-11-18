@@ -27,6 +27,9 @@ rem silently falls back to a source build (scripts\prepare-windows-skia.py).
 set SKIA_BINARIES_URL=file://%ROOT%\.local\windows\skia\prepared\skia-binaries-b7f043e0b1e2a850e702-x86_64-pc-windows-msvc-d3d-ganesh-gl-jpegd-jpege-pdf-static.tar.gz
 set SKIA_BINARIES_URL=%SKIA_BINARIES_URL:\=/%
 set YAPFAST_RELEASE=1
+rem The tag's version, so About compares itself with this fork's releases
+rem instead of the 0.3.0 that Cargo.toml still says (src/build_info.rs).
+set YAPFAST_VERSION=%VERSION%
 
 cd /d "%ROOT%"
 rem Skia's bundled libjpeg and libwebrtc's both define jpeg_natural_order,

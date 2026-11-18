@@ -3,11 +3,7 @@
 //! pictures into the program. On Linux, lets a plain `cargo build` link
 //! rust-skia's own Skia archive beside libwebrtc.
 
-use std::{
-    env, fs,
-    path::PathBuf,
-    process::Command,
-};
+use std::{env, fs, path::PathBuf, process::Command};
 
 fn main() {
     println!("cargo:rerun-if-changed=packaging/windows");
@@ -20,8 +16,6 @@ fn main() {
     }
 }
 
-
-
 /// Hands src/build_info.rs the commit and its date, and whether this is a
 /// release build. Nix's sandbox has no Git, so nix/package.nix gives the
 /// first two in `YAPFAST_COMMIT` and `YAPFAST_COMMIT_DATE`; a build in a
@@ -29,7 +23,12 @@ fn main() {
 /// release's packaging sets `YAPFAST_RELEASE`: every other build, such as
 /// `cargo run`, is a development build.
 fn build_info() {
-    for name in ["YAPFAST_COMMIT", "YAPFAST_COMMIT_DATE", "YAPFAST_RELEASE"] {
+    for name in [
+        "YAPFAST_COMMIT",
+        "YAPFAST_COMMIT_DATE",
+        "YAPFAST_RELEASE",
+        "YAPFAST_VERSION",
+    ] {
         println!("cargo:rerun-if-env-changed={name}");
     }
     // Only this directory's own repository counts: source unpacked inside
@@ -77,6 +76,15 @@ fn build_info() {
     }
     if env::var_os("YAPFAST_RELEASE").is_some_and(|release| !release.is_empty()) {
         println!("cargo:rustc-env=YAPFAST_BUILD_RELEASE=1");
+    }
+    // This fork tags releases (0.3.1-fork.N) while Cargo.toml stays at the
+    // release they grew from, so the packaging passes the tag's version in.
+    // Without it About chases its own release forever.
+    if let Some(version) = env::var("YAPFAST_VERSION")
+        .ok()
+        .filter(|version| !version.is_empty())
+    {
+        println!("cargo:rustc-env=YAPFAST_BUILD_VERSION={version}");
     }
 }
 

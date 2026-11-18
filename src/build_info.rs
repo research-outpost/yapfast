@@ -10,7 +10,13 @@
 //! the Arch PKGBUILD) sets `YAPFAST_RELEASE`, and `build.rs` passes that on;
 //! every other build is a development build. A nightly's version names it.
 
-const VERSION: &str = env!("CARGO_PKG_VERSION");
+/// A release's version: Cargo.toml's, unless the packaging passed this
+/// fork's own release tag (0.3.1-fork.N) in as one.
+const VERSION: &str =
+    match option_env!("YAPFAST_BUILD_VERSION") {
+        Some(version) => version,
+        None => env!("CARGO_PKG_VERSION"),
+    };
 const COMMIT: Option<&str> = option_env!("YAPFAST_BUILD_COMMIT");
 const DATE: Option<&str> = option_env!("YAPFAST_BUILD_DATE");
 const RELEASE: bool = option_env!("YAPFAST_BUILD_RELEASE").is_some();
@@ -100,6 +106,10 @@ impl<'a> BuildInfo<'a> {
             Channel::Nightly
         } else if !self.release {
             Channel::Development
+        } else if self.version.contains("-fork.") {
+            // This fork's releases: the tail is its own patch count, not a
+            // half-finished release.
+            Channel::Stable
         } else if self.version.contains('-') {
             Channel::Prerelease
         } else {
@@ -162,6 +172,13 @@ mod tests {
     }
 
     const COMMIT_FULL: &str = "59391f96a1b2c3d4e5f60718293a4b5c6d7e8f90";
+
+    #[test]
+    fn a_fork_release_reads_as_stable() {
+        let built = build("0.3.1-fork.3", true, None, None);
+        assert_eq!(built.channel(), Channel::Stable);
+        assert_eq!(built.headline(), "Yapfast v0.3.1-fork.3");
+    }
 
     #[test]
     fn a_release_without_a_prerelease_part_is_stable() {

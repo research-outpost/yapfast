@@ -643,6 +643,31 @@ mod tests {
     }
 
     #[test]
+    fn a_fork_release_calls_itself_up_to_date() {
+        let releases = [release("v0.3.1-fork.3"), release("v0.3.1-fork.4")];
+        assert_eq!(
+            decide(
+                &releases,
+                &version("0.3.1-fork.3"),
+                Channel::Stable,
+                false,
+                None
+            ),
+            Outcome::Available(release("v0.3.1-fork.4"))
+        );
+        assert_eq!(
+            decide(
+                &releases[1..],
+                &version("0.3.1-fork.4"),
+                Channel::Stable,
+                false,
+                None
+            ),
+            Outcome::UpToDate
+        );
+    }
+
+    #[test]
     fn a_skipped_release_stays_quiet_until_a_newer_one_comes() {
         let releases = [release("v0.4.0"), release("v0.4.1")];
         let current = version("0.4.0");
