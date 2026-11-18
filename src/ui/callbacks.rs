@@ -281,18 +281,11 @@ fn show_emoji(adapter: &Rc<RefCell<Adapter>>, window: &YapfastWindow, query: &st
         } else {
             Default::default()
         };
-    let (rows, sections) = emoji::rows(
-        query,
-        &favorites,
-        &frequent,
-        &custom,
-        columns,
-        |set| {
-            let url = set.icon.clone()?;
-            let icon = adapter.app.state.pictures.get(&url)?;
-            Some((url, picture(icon)))
-        },
-    );
+    let (rows, sections) = emoji::rows(query, &favorites, &frequent, &custom, columns, |set| {
+        let url = set.icon.clone()?;
+        let icon = adapter.app.state.pictures.get(&url)?;
+        Some((url, picture(icon)))
+    });
     if !wanted.is_empty() {
         adapter.action(window, Action::WantedPictures(wanted));
     }

@@ -1227,7 +1227,9 @@ fn show_motion(window: &YapfastWindow) {
         Animate::Never => false,
     };
     window.global::<Motion>().set_playing(playing);
-    window.global::<Motion>().set_never(ANIMATE.get() == Animate::Never);
+    window
+        .global::<Motion>()
+        .set_never(ANIMATE.get() == Animate::Never);
 }
 
 /// Where a setting's value is among its choices.

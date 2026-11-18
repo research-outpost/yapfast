@@ -1338,7 +1338,6 @@ async fn fetches_the_favourite_and_used_emoji_with_the_favourite_gifs() {
     assert_eq!(names(emojis.reactions), ["fire", "100"]);
 }
 
-
 #[tokio::test(flavor = "multi_thread")]
 #[ignore = "starts testing/fake_discord.ts with bun; run scripts/test-fake-discord"]
 async fn reads_history_and_member_lists() {

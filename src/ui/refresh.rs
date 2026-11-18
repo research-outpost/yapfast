@@ -44,12 +44,15 @@ impl RosterShown {
         Self {
             members: members.clone(),
             selection_version,
-            timeout_due: members.as_ref().and_then(|list| list.as_ref().ok()).and_then(|list| {
-                list.iter()
-                    .filter_map(|member| member.timed_out_until)
-                    .filter(|until| *until > now)
-                    .min()
-            }),
+            timeout_due: members
+                .as_ref()
+                .and_then(|list| list.as_ref().ok())
+                .and_then(|list| {
+                    list.iter()
+                        .filter_map(|member| member.timed_out_until)
+                        .filter(|until| *until > now)
+                        .min()
+                }),
         }
     }
 }
@@ -1741,7 +1744,10 @@ impl Adapter {
         let held = self.roster_shown.as_ref().filter(|shown| {
             self.roster_due.running()
                 && shown.selection_version == selection
-                && matches!((&shown.members, &self.app.state.members), (Some(Ok(_)), Some(Ok(_))))
+                && matches!(
+                    (&shown.members, &self.app.state.members),
+                    (Some(Ok(_)), Some(Ok(_)))
+                )
                 && shown.members != self.app.state.members
         });
         self.roster_held |= held.is_some();

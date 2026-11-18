@@ -1627,7 +1627,6 @@ impl Drop for Worker {
 mod tests {
     use super::*;
 
-
     #[test]
     fn shows_mobile_streams_upright_when_the_phone_turns() {
         // Left half dark, right half light, sent as landscape pixels.

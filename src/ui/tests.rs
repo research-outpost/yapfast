@@ -1083,7 +1083,8 @@ fn a_voice_message_shows_its_player_which_plays_and_pauses() {
         .action(&window, Action::SelectRoom("general".into()));
     let message = ChatMessage {
         item: "d:1".into(),
-        author: "Sam".into(),        attachments: vec![yapfast_core::chat::Attachment {
+        author: "Sam".into(),
+        attachments: vec![yapfast_core::chat::Attachment {
             name: "voice-message.ogg".into(),
             size: Some(36_000),
             image: false,
@@ -7426,7 +7427,11 @@ fn rows_far_from_those_the_picker_shows_let_go_of_their_pictures() {
     // the fonts installed, so the check compares against what was there.
     let left_before = drawn(0..4);
     window.invoke_emoji_scrolled_to(6.0 * emoji::CELL, 6.0 * emoji::CELL);
-    assert_eq!(drawn(0..4), left_before, "the rows just left keep their pictures");
+    assert_eq!(
+        drawn(0..4),
+        left_before,
+        "the rows just left keep their pictures"
+    );
     // A long one lets go of it, whether it went by steps or at once, as the
     // sidebar jumps; the rows it reached are drawn, and those between were not.
     window.invoke_emoji_scrolled_to(40.0 * emoji::CELL, 6.0 * emoji::CELL);
@@ -7917,7 +7922,10 @@ fn the_about_page_names_the_build_and_checks_nothing_until_told() {
     window.set_settings_open(true);
     window.set_settings_section(9);
     let updates = window.global::<Updates>();
-    assert!(!updates.get_check(), "the check is off until it's turned on");
+    assert!(
+        !updates.get_check(),
+        "the check is off until it's turned on"
+    );
     assert_eq!(updates.get_status(), UpdateStatus::Idle);
     window.show().unwrap();
     window
