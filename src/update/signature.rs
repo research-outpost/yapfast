@@ -136,17 +136,17 @@ mod tests {
     }
 
     /// The keys a release build carries, which the tests above don't use.
+    /// This fork carries no nightly key: it publishes no nightlies.
     #[test]
     fn the_built_in_keys_are_keys_and_the_kinds_share_none() {
         let built_in = [
             include_str!("../../packaging/keys/stable.pub"),
             include_str!("../../packaging/keys/stable-backup.pub"),
-            include_str!("../../packaging/keys/nightly.pub"),
         ];
         let keys: Vec<PublicKey> = built_in
             .iter()
             .map(|key| PublicKey::decode(key).expect("a minisign public key"))
             .collect();
-        assert!(keys[0] != keys[1] && keys[1] != keys[2] && keys[0] != keys[2]);
+        assert!(keys[0] != keys[1]);
     }
 }

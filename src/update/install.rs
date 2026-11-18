@@ -825,7 +825,7 @@ mod tests {
         )
         .await
         .unwrap_err();
-        assert!(error.contains("publishes no sum"), "{error}");
+        assert!(error.contains("couldn't be verified"), "{error}");
     }
 
     #[cfg(unix)]

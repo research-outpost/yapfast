@@ -1,0 +1,7 @@
+
+# Signature fixtures and embedded pub keys are read byte for byte by
+# include_str!/include_bytes! and hash-checked; CRLF checkout corrupts them.
+*.minisig -text
+*.pub -text
+src/update/testdata/* -text
+SHA256SUMS.txt -text
