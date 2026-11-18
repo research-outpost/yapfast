@@ -13,7 +13,7 @@ default-members = ["."]
 # every workspace member it compiles, even one --exclude leaves out, and
 # linting Slint's generated code took 190 s of a 253 s check after a UI change.
 # Outside, rustc checks it in 37 s.
-exclude = ["crates/yapfast-ui", "vendor/matrix-rtc-livekit", "vendor/webrtc-sys", "vendor/davey", "vendor/x264-src", "vendor/ffmpeg-src"]
+exclude = ["crates/yapfast-ui", "vendor/matrix-rtc-livekit", "vendor/webrtc-sys", "vendor/davey", "vendor/deep_filter", "vendor/x264-src", "vendor/ffmpeg-src"]
 resolver = "3"
 
 [features]

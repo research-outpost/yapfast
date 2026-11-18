@@ -171,11 +171,6 @@ licences and attribution into each package and `THIRD-PARTY.json`. Update by
 taking the new commit's files over these, as `vendor/twemoji/README.yapfast.md`
 says.
 
-libDF, DeepFilterNet's Rust implementation, comes from DeepFilterNet's
-repository at `d375b2d`, since crates.io has only its 0.2.5. It asks for
-tract `^0.21.4`, but tract 0.21.10 changed an API it uses, so Cargo.lock keeps
-tract at 0.21.4, the version DeepFilterNet's own lockfile has.
-
 LiveKit's Rust crates must stay on the mutually compatible versions in
 Cargo.lock. Do not run an unrestricted `cargo update`. Upgrade against the
 MatrixRTC lockfile and rebuild the native media stack. On Linux, the Nix shell
@@ -232,7 +227,9 @@ dependency in Cargo.toml:
   id changes, and reading a frame's overlong nonce without panicking.
 - `tungstenite`: tungstenite 0.26.2, giving back the read buffer a large frame
   such as Discord's READY grew.
-
+- `deep_filter`: libDF, DeepFilterNet's Rust implementation, from its
+  repository at `d375b2d` (crates.io has only its 0.2.5), with the model it
+  builds in, ported from tract 0.21 to tract 0.23.
 `vendor/x264-src` isn't a patched crate but x264's own C source, unchanged and
 trimmed to what an 8-bit encoder library uses, with a build script in place of
 its configure and Makefile. Go Live and the camera encode H264 with it; NASM
@@ -258,8 +255,7 @@ root, with no `src/`, both in `vendor/` and in Cargo's registry.
 Crates that aren't vendored are in
 `~/.cargo/registry/src/index.crates.io-*/NAME-VERSION/`. The Matrix SDK is a git
 dependency; its checkout is `~/.cargo/git/checkouts/matrix-rust-sdk-*/c6ad52e/`,
-the short form of the revision pinned in Cargo.toml. libDF's is
-`~/.cargo/git/checkouts/deepfilternet-*/d375b2d/libDF/`. libwebrtc's headers are in
+the short form of the revision pinned in Cargo.toml. libwebrtc's headers are in
 `$LK_CUSTOM_WEBRTC/include` inside the development shell.
 
 ### Media libraries
