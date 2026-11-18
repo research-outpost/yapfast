@@ -19,3 +19,7 @@ __pycache__/
 /deploy/
 /DESIGN.md
 /PRODUCT.md
+
+# minisign private keys for signing fork releases; the .pub halves
+# are committed under packaging/keys.
+/keys/*.key

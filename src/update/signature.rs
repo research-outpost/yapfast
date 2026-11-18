@@ -35,7 +35,8 @@ pub const KEYS: Keys = Keys {
         include_str!("../../packaging/keys/stable.pub"),
         include_str!("../../packaging/keys/stable-backup.pub"),
     ],
-    nightly: &[include_str!("../../packaging/keys/nightly.pub")],
+    // This fork publishes no nightlies, so nothing is trusted for them.
+    nightly: &[],
 };
 
 /// The tests' own keys, which `testdata/sign` signs with.

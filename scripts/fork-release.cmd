@@ -66,13 +66,30 @@ echo Making the installer...
 ISCC.exe /Q /O"%ROOT%\dist" /DAppVersion=%VERSION% /DVersionNumber=%NUMVER% /DSourceDir=%STAGE% /DLicenseFile=%ROOT%\LICENSE packaging\windows\yapfast.iss
 if errorlevel 1 exit /b 1
 
+rem The updater installs only releases whose SHA256SUMS.txt carries this fork's
+rem minisign signature (src/update/signature.rs, packaging/keys\*.pub). The
+rem trusted comment must read exactly: yapfast v<VERSION> SHA256SUMS.txt.
+rem This asks for the passphrase of keys\stable.key; keep its backup offline.
+set DIST=%ROOT%\dist
+copy /y "%STAGE%\yapfast.exe" "%DIST%\Yapfast-%VERSION%-windows-x64.exe" >nul
+echo Summing the release...
+powershell -NoProfile -Command "Get-FileHash -Algorithm SHA256 '%DIST%\Yapfast-%VERSION%-windows-x64-setup.exe','%DIST%\Yapfast-%VERSION%-windows-x64.exe' | ForEach-Object { ('{0}  {1}' -f $_.Hash.ToLower(), (Split-Path -Leaf $_.Path)) } | Set-Content -Encoding ascii '%DIST%\SHA256SUMS.txt'"
+if errorlevel 1 exit /b 1
+echo Signing the sums (keys\stable.key; asks for its passphrase)...
+minisign -S -s "%ROOT%\keys\stable.key" -m "%DIST%\SHA256SUMS.txt" -t "yapfast v%VERSION% SHA256SUMS.txt" -c "Yapfast %VERSION%"
+if errorlevel 1 exit /b 1
+minisign -V -q -p "%ROOT%\packaging\keys\stable.pub" -m "%DIST%\SHA256SUMS.txt" -x "%DIST%\SHA256SUMS.txt.minisig"
+if errorlevel 1 (echo signing key does not match the pub keys in the app & exit /b 1)
+
 echo.
 echo Built:
 echo   %STAGE%\yapfast.exe
 echo   %ROOT%\dist\Yapfast-%VERSION%-windows-x64-setup.exe
+echo   %ROOT%\dist\Yapfast-%VERSION%-windows-x64.exe
+echo   %ROOT%\dist\SHA256SUMS.txt + .minisig
 echo.
 echo To publish it:
 echo   git tag -a v%VERSION% -m "Yapfast %VERSION%"
 echo   git push gh refs/tags/v%VERSION%
-echo   gh release create v%VERSION% -R research-outpost/yapfast "%ROOT%\dist\Yapfast-%VERSION%-windows-x64-setup.exe" "%STAGE%\yapfast.exe"
+echo   gh release create v%VERSION% -R research-outpost/yapfast "%ROOT%\dist\Yapfast-%VERSION%-windows-x64-setup.exe" "%DIST%\Yapfast-%VERSION%-windows-x64.exe" "%DIST%\SHA256SUMS.txt" "%DIST%\SHA256SUMS.txt.minisig"
 endlocal
