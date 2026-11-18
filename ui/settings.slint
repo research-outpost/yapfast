@@ -1336,14 +1336,7 @@ export component AboutSettings inherits VerticalLayout {
         checked <=> Updates.check;
         toggled => { Updates.preferences-changed(); }
     }
-    SettingsSwitch {
-        text: "Include nightly builds";
-        description: "Nightlies are builds of the main branch, made for testing and rougher than a release. Off, only releases count.";
-        checked <=> Updates.nightlies;
-        enabled: Updates.check;
-        locked-tip: "Turn on Check for updates first";
-        toggled => { Updates.preferences-changed(); }
-    }
+    // This fork publishes no nightlies, so there is nothing to opt into.
 }
 
 // Settings: linking a Discord account.
