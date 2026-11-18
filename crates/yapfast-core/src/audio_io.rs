@@ -230,7 +230,9 @@ static WARNED: Mutex<Option<HashMap<(String, String), (Instant, u32)>>> = Mutex:
 /// went away costs the log no more than a line per minute while sounds keep
 /// playing on it.
 fn due(name: &'static str, error: &str, at: Instant) -> Option<u32> {
-    let mut held = WARNED.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    let mut held = WARNED
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
     let seen = held.get_or_insert_with(HashMap::default);
     let key = (name.to_owned(), error.to_owned());
     match seen.get_mut(&key) {
@@ -422,10 +424,19 @@ mod tests {
         // The first failure of a stream gets a line to itself.
         assert_eq!(due("Clamp a", "gone", start), Some(0));
         // Repeats of the same one hold their peace, counting up.
-        assert_eq!(due("Clamp a", "gone", start + Duration::from_secs(20)), None);
-        assert_eq!(due("Clamp a", "gone", start + Duration::from_secs(40)), None);
+        assert_eq!(
+            due("Clamp a", "gone", start + Duration::from_secs(20)),
+            None
+        );
+        assert_eq!(
+            due("Clamp a", "gone", start + Duration::from_secs(40)),
+            None
+        );
         // A minute in, the line says how many it skipped.
-        assert_eq!(due("Clamp a", "gone", start + Duration::from_secs(60)), Some(2));
+        assert_eq!(
+            due("Clamp a", "gone", start + Duration::from_secs(60)),
+            Some(2)
+        );
         // Another stream, or another error, is a line of its own.
         assert_eq!(due("Clamp b", "gone", start), Some(0));
         assert_eq!(due("Clamp a", "busy", start), Some(0));
