@@ -2427,6 +2427,12 @@ export component YapfastWindow inherits Window {
                 spacing: 0px;
                 Rectangle {
                     height: 48px;
+                    background: Theme.header;
+                    // A hairline under the header when it is its own ground.
+                    Rectangle {
+                        y: parent.height - 1px; height: 1px;
+                        background: Theme.header == Theme.chat ? transparent : Theme.line;
+                    }
                     HorizontalLayout {
                         padding-left: 16px; padding-right: 16px; spacing: 10px;
                         if root.room-direct: Middle {
