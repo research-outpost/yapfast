@@ -2252,6 +2252,7 @@ export component YapfastWindow inherits Window {
                             spacing: 0px;
                             Rectangle {
                                 height: 48px;
+                                background: Theme.sidebar-header;
                                 if root.header-server == "": Text { x: 16px; width: parent.width - (root.dms-selected && !root.preview ? (root.discord-linked ? 88px : 56px) : 32px); text: root.sidebar-title; font-size: 16px; font-weight: 700; color: Theme.text; vertical-alignment: center; overflow: elide; }
                                 if root.header-server != "": server-header := ServerHeader {
                                     x: 8px; y: 8px; width: parent.width - 16px - (root.header-invite ? 32px : 0px); height: 32px;

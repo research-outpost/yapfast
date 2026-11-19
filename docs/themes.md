@@ -57,13 +57,15 @@ colours and a card.
 | Rosé Pine Dawn | `rose-pine-dawn` | no | rose | [Rosé Pine](https://rosepinetheme.com/palette/) |
 | Sakura | `sakura` | no | blossom pink | Yapfast's own |
 
-Two colours stand for a single part each, so a theme can set them apart from
-the rest: `rail-indicator`, the pill beside the open server or DM home on the
+Three colours stand for a single part each, so a theme can set them apart
+from the rest: `rail-indicator`, the pill beside the open server or DM home on the
 rail (the pills of a pointed-at or unread tile keep `text`), and `header`,
 the ground of the conversation's header row, with a `line` hairline under it
 where it differs from `chat`. Every built-in theme gives them its `text` and
-`chat`. Unlike other missing colours, a custom theme that lacks either takes
-its own `text` or `chat` rather than its base's, so a theme saved before they
+`chat`. `sidebar-header` is the ground of the sidebar's header row (the server's
+name or Direct messages); every built-in theme gives it its `sidebar`. Unlike
+other missing colours, a custom theme that lacks one of these takes its own
+`text`, `chat` or `sidebar` rather than its base's, so a theme saved before they
 existed looks as it did.
 
 The palettes of Catppuccin, Dracula, Nord, Gruvbox, Tokyo Night and Rosé Pine

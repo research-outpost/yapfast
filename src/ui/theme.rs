@@ -99,6 +99,7 @@ theme! {
     avatar(get_avatar, set_avatar),
     rail_indicator(get_rail_indicator, set_rail_indicator),
     header(get_header, set_header),
+    sidebar_header(get_sidebar_header, set_sidebar_header),
 }
 
 /// Yapfast's own colours: layered graphite with a marigold accent. The defaults
@@ -141,6 +142,7 @@ pub const YAP: Theme = Theme {
     avatar: rgb(0x6b7280),
     rail_indicator: rgb(0xeef0f4),
     header: rgb(0x1e1f24),
+    sidebar_header: rgb(0x17181c),
 };
 
 /// Discord's own dark theme (Dark, `.theme-dark` with `.theme-darker` in its
@@ -183,6 +185,7 @@ const BONFIRE: Theme = Theme {
     avatar: rgb(0x5c5e66),
     rail_indicator: rgb(0xefeff1),
     header: rgb(0x1a1a1e),
+    sidebar_header: rgb(0x121214),
 };
 
 /// Catppuccin's darkest flavour, with mauve for the accent.
@@ -224,6 +227,7 @@ const CATPPUCCIN_MOCHA: Theme = Theme {
     avatar: rgb(0x6c7086),
     rail_indicator: rgb(0xcdd6f4),
     header: rgb(0x1e1e2e),
+    sidebar_header: rgb(0x181825),
 };
 
 /// Catppuccin's light flavour, with mauve for the accent.
@@ -265,6 +269,7 @@ const CATPPUCCIN_LATTE: Theme = Theme {
     avatar: rgb(0x7c7f93),
     rail_indicator: rgb(0x4c4f69),
     header: rgb(0xeff1f5),
+    sidebar_header: rgb(0xe6e9ef),
 };
 
 /// Dracula, with purple for the accent.
@@ -306,6 +311,7 @@ const DRACULA: Theme = Theme {
     avatar: rgb(0x6272a4),
     rail_indicator: rgb(0xf8f8f2),
     header: rgb(0x282a36),
+    sidebar_header: rgb(0x21222c),
 };
 
 /// Nord's Polar Night and Snow Storm, with frost for the accent. Polar
@@ -348,6 +354,7 @@ const NORD: Theme = Theme {
     avatar: rgb(0x616e88),
     rail_indicator: rgb(0xeceff4),
     header: rgb(0x2e3440),
+    sidebar_header: rgb(0x292e39),
 };
 
 /// Gruvbox's dark palette at medium contrast, with orange for the accent.
@@ -389,6 +396,7 @@ const GRUVBOX_DARK: Theme = Theme {
     avatar: rgb(0x7c6f64),
     rail_indicator: rgb(0xebdbb2),
     header: rgb(0x282828),
+    sidebar_header: rgb(0x222424),
 };
 
 /// Tokyo Night, the Night style, with blue for the accent.
@@ -430,6 +438,7 @@ const TOKYO_NIGHT: Theme = Theme {
     avatar: rgb(0x565f89),
     rail_indicator: rgb(0xc0caf5),
     header: rgb(0x1a1b26),
+    sidebar_header: rgb(0x16161e),
 };
 
 /// Rosé Pine's light variant, with rose for the accent.
@@ -471,6 +480,7 @@ const ROSE_PINE_DAWN: Theme = Theme {
     avatar: rgb(0x9893a5),
     rail_indicator: rgb(0x575279),
     header: rgb(0xfaf4ed),
+    sidebar_header: rgb(0xf2e9e1),
 };
 
 /// Yapfast's own: cherry blossom on rice paper, pink on a pale pink ground.
@@ -512,6 +522,7 @@ const SAKURA: Theme = Theme {
     avatar: rgb(0xc08aa2),
     rail_indicator: rgb(0x4a3541),
     header: rgb(0xfff8fb),
+    sidebar_header: rgb(0xfcecf2),
 };
 
 /// A theme Yapfast comes with: the id a layout stores and the name Appearance
@@ -686,6 +697,9 @@ impl From<Stored> for Custom {
         }
         if !stored.colours.contains_key("header") {
             theme.header = theme.chat;
+        }
+        if !stored.colours.contains_key("sidebar-header") {
+            theme.sidebar_header = theme.sidebar;
         }
         Self {
             id: stored.id,
