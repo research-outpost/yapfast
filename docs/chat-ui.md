@@ -321,6 +321,13 @@ the size: Wayland doesn't let a window choose its place, and an X11 place could
 be on a monitor that's gone. A window made again from the tray comes back
 from the same record.
 
+On Windows the system draws the title bar, in the theme's colours: the
+caption on the rail's ground with the text's ink, its buttons dark or light
+as the theme is (`src/ui/caption.rs`, through DWM). It follows a theme
+change or an edit in Appearance at once, and keeps what only the system's
+bar does, such as Snap Layouts and the system menu. Windows 10 ignores the
+colours and keeps its own.
+
 On Linux desktops that give their windows title bars, Yapfast draws its own
 in place of the desktop's, as Discord does (`src/ui/title_bar.rs`,
 `ui/title_bar.slint`): a 32px bar on the rail's ground across the top, with

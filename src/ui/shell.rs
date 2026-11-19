@@ -107,7 +107,10 @@ impl Shell {
             return;
         };
         match window.show() {
-            Ok(()) => self.confirm_gpu(&window),
+            Ok(()) => {
+                super::caption::paint(&window);
+                self.confirm_gpu(&window);
+            }
             Err(error) => self.fail_on_gpu(error.to_string()),
         }
     }
@@ -289,6 +292,7 @@ impl Shell {
         }
         drop(adapter);
         window.show()?;
+        super::caption::paint(&window);
         self.confirm_gpu(&window);
         prepare(&window);
         window.set_graphics_notice(self.notice.clone());

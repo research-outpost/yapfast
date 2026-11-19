@@ -42,6 +42,7 @@ mod browser;
 mod call_link;
 mod call_timer;
 mod callbacks;
+mod caption;
 mod channel_settings;
 mod games;
 mod gifs;
@@ -175,6 +176,7 @@ pub fn run(
     if !hidden && let Err(error) = window.show() {
         return failed(error, "could not show Yapfast");
     }
+    caption::paint(&window);
     if !preview {
         AUTOSTART.set(autostart::SUPPORTED);
         PROTOCOL.set(cfg!(feature = "discord") && crate::protocol::SUPPORTED);
