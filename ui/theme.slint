@@ -54,6 +54,9 @@ export global Theme {
     /// The ground of the sidebar's header row: the server's name or Direct
     /// messages above the channel list.
     in-out property <color> sidebar-header: #17181c;
+    /// The ground under picture, video and thumbnail cells, so transparent
+    /// media wears its own colour rather than the sunken field's.
+    in-out property <color> media-ground: #1e1f24;
     /// Whether the theme is dark, for the std-widgets that follow the system's scheme.
     in-out property <bool> dark: true;
     out property <duration> quick: 120ms;

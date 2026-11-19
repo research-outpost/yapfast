@@ -100,6 +100,7 @@ theme! {
     rail_indicator(get_rail_indicator, set_rail_indicator),
     header(get_header, set_header),
     sidebar_header(get_sidebar_header, set_sidebar_header),
+    media_ground(get_media_ground, set_media_ground),
 }
 
 /// Yapfast's own colours: layered graphite with a marigold accent. The defaults
@@ -142,6 +143,7 @@ pub const YAP: Theme = Theme {
     avatar: rgb(0x6b7280),
     rail_indicator: rgb(0xeef0f4),
     header: rgb(0x1e1f24),
+    media_ground: rgb(0x1e1f24),
     sidebar_header: rgb(0x17181c),
 };
 
@@ -185,6 +187,7 @@ const BONFIRE: Theme = Theme {
     avatar: rgb(0x5c5e66),
     rail_indicator: rgb(0xefeff1),
     header: rgb(0x1a1a1e),
+    media_ground: rgb(0x1a1a1e),
     sidebar_header: rgb(0x121214),
 };
 
@@ -227,6 +230,7 @@ const CATPPUCCIN_MOCHA: Theme = Theme {
     avatar: rgb(0x6c7086),
     rail_indicator: rgb(0xcdd6f4),
     header: rgb(0x1e1e2e),
+    media_ground: rgb(0x1e1e2e),
     sidebar_header: rgb(0x181825),
 };
 
@@ -269,6 +273,7 @@ const CATPPUCCIN_LATTE: Theme = Theme {
     avatar: rgb(0x7c7f93),
     rail_indicator: rgb(0x4c4f69),
     header: rgb(0xeff1f5),
+    media_ground: rgb(0xeff1f5),
     sidebar_header: rgb(0xe6e9ef),
 };
 
@@ -311,6 +316,7 @@ const DRACULA: Theme = Theme {
     avatar: rgb(0x6272a4),
     rail_indicator: rgb(0xf8f8f2),
     header: rgb(0x282a36),
+    media_ground: rgb(0x282a36),
     sidebar_header: rgb(0x21222c),
 };
 
@@ -354,6 +360,7 @@ const NORD: Theme = Theme {
     avatar: rgb(0x616e88),
     rail_indicator: rgb(0xeceff4),
     header: rgb(0x2e3440),
+    media_ground: rgb(0x2e3440),
     sidebar_header: rgb(0x292e39),
 };
 
@@ -396,6 +403,7 @@ const GRUVBOX_DARK: Theme = Theme {
     avatar: rgb(0x7c6f64),
     rail_indicator: rgb(0xebdbb2),
     header: rgb(0x282828),
+    media_ground: rgb(0x282828),
     sidebar_header: rgb(0x222424),
 };
 
@@ -438,6 +446,7 @@ const TOKYO_NIGHT: Theme = Theme {
     avatar: rgb(0x565f89),
     rail_indicator: rgb(0xc0caf5),
     header: rgb(0x1a1b26),
+    media_ground: rgb(0x1a1b26),
     sidebar_header: rgb(0x16161e),
 };
 
@@ -480,6 +489,7 @@ const ROSE_PINE_DAWN: Theme = Theme {
     avatar: rgb(0x9893a5),
     rail_indicator: rgb(0x575279),
     header: rgb(0xfaf4ed),
+    media_ground: rgb(0xfaf4ed),
     sidebar_header: rgb(0xf2e9e1),
 };
 
@@ -522,6 +532,7 @@ const SAKURA: Theme = Theme {
     avatar: rgb(0xc08aa2),
     rail_indicator: rgb(0x4a3541),
     header: rgb(0xfff8fb),
+    media_ground: rgb(0xfff8fb),
     sidebar_header: rgb(0xfcecf2),
 };
 
@@ -689,7 +700,7 @@ impl From<Stored> for Custom {
                 *slot = colour;
             }
         }
-        // The two newest colours stand in for older ones of the theme's own,
+        // The newest colours stand in for older ones of the theme's own,
         // not its base's, so a theme saved before them looks as it did: the
         // rail's indicator is the text, the header is the chat.
         if !stored.colours.contains_key("rail-indicator") {
@@ -700,6 +711,9 @@ impl From<Stored> for Custom {
         }
         if !stored.colours.contains_key("sidebar-header") {
             theme.sidebar_header = theme.sidebar;
+        }
+        if !stored.colours.contains_key("media-ground") {
+            theme.media_ground = theme.chat;
         }
         Self {
             id: stored.id,
