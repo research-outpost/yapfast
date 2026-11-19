@@ -80,9 +80,10 @@ echo Summing the release...
 powershell -NoProfile -Command "Get-FileHash -Algorithm SHA256 '%DIST%\Yapfast-%VERSION%-windows-x64-setup.exe','%DIST%\Yapfast-%VERSION%-windows-x64.exe' | ForEach-Object { ('{0}  {1}' -f $_.Hash.ToLower(), (Split-Path -Leaf $_.Path)) } | Set-Content -Encoding ascii '%DIST%\SHA256SUMS.txt'"
 if errorlevel 1 exit /b 1
 echo Signing the sums (keys\stable.key; asks for its passphrase)...
-minisign -S -s "%ROOT%\keys\stable.key" -m "%DIST%\SHA256SUMS.txt" -t "yapfast v%VERSION% SHA256SUMS.txt" -c "Yapfast %VERSION%"
+set MINISIGN=X:\Dev\tools\minisign\minisign-win64\x86_64\minisign.exe
+"%MINISIGN%" -S -s "%ROOT%\keys\stable.key" -m "%DIST%\SHA256SUMS.txt" -t "yapfast v%VERSION% SHA256SUMS.txt" -c "Yapfast %VERSION%"
 if errorlevel 1 exit /b 1
-minisign -V -q -p "%ROOT%\packaging\keys\stable.pub" -m "%DIST%\SHA256SUMS.txt" -x "%DIST%\SHA256SUMS.txt.minisig"
+"%MINISIGN%" -V -q -p "%ROOT%\packaging\keys\stable.pub" -m "%DIST%\SHA256SUMS.txt" -x "%DIST%\SHA256SUMS.txt.minisig"
 if errorlevel 1 (echo signing key does not match the pub keys in the app & exit /b 1)
 
 echo.

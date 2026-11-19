@@ -6,7 +6,7 @@ setlocal
 set VERSION=%~1
 if "%VERSION%"=="" set VERSION=0.3.1-fork.4
 cd /d "%~dp0.."
-set MS=%LOCALAPPDATA%\Microsoft\WinGet\Links\minisign.exe
+set MS=X:\Dev\tools\minisign\minisign-win64\x86_64\minisign.exe
 echo Signing dist\SHA256SUMS.txt for v%VERSION% (type the passphrase of keys\stable.key)...
 "%MS%" -S -s "keys\stable.key" -m "dist\SHA256SUMS.txt" -t "yapfast v%VERSION% SHA256SUMS.txt" -c "Yapfast %VERSION%"
 if errorlevel 1 (echo SIGN FAILED & pause & exit /b 1)
