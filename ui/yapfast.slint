@@ -2428,11 +2428,6 @@ export component YapfastWindow inherits Window {
                 Rectangle {
                     height: 48px;
                     background: Theme.header;
-                    // A hairline under the header when it is its own ground.
-                    Rectangle {
-                        y: parent.height - 1px; height: 1px;
-                        background: Theme.header == Theme.chat ? transparent : Theme.line;
-                    }
                     HorizontalLayout {
                         padding-left: 16px; padding-right: 16px; spacing: 10px;
                         if root.room-direct: Middle {
@@ -2667,7 +2662,9 @@ export component YapfastWindow inherits Window {
                             Text { text: root.members; color: Theme.muted; font-size: 14px; font-weight: 500; vertical-alignment: center; }
                         }
                     }
-                    Rectangle { y: parent.height - 1px; height: 1px; background: Theme.edge; }
+                    // Its bottom line: the line colour where the header has a ground of
+                    // its own, which the edge colour (often the chat's) would not show on.
+                    Rectangle { y: parent.height - 1px; height: 1px; background: Theme.header == Theme.chat ? Theme.edge : Theme.line; }
                 }
                 HorizontalLayout {
                     spacing: 0px;
