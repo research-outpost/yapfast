@@ -20,8 +20,9 @@ if "%VERSION%"=="" (
 for /f "tokens=1 delims=-" %%v in ("%VERSION%") do set NUMVER=%%v
 
 set ROOT=%~dp0..
-set PATH=%USERPROFILE%\.cargo\bin;%LOCALAPPDATA%\bin\NASM;C:\Program Files\LLVM\bin;%LOCALAPPDATA%\Microsoft\WinGet\Packages\Ninja-build.Ninja_Microsoft.Winget.Source_8wekyb3d8bbwe;%LOCALAPPDATA%\Programs\Inno;%PATH%
-set NASM=%LOCALAPPDATA%\bin\NASM\nasm.exe
+set PATH=%USERPROFILE%\.cargo\bin;X:\Dev\tools\nasm;X:\Dev\tools\llvm\bin;X:\Dev\tools\ninja;X:\Dev\tools\inno;%PATH%
+rem NASM must stay out of the environment: it re-fingerprints skia-bindings
+set LIBCLANG_PATH=X:\Dev\tools\llvm\bin
 rem The repacked Skia archive: exactly two slashes, forward ones, or cargo
 rem silently falls back to a source build (scripts\prepare-windows-skia.py).
 set SKIA_BINARIES_URL=file://%ROOT%\.local\windows\skia\prepared\skia-binaries-b7f043e0b1e2a850e702-x86_64-pc-windows-msvc-d3d-ganesh-gl-jpegd-jpege-pdf-static.tar.gz
@@ -37,8 +38,8 @@ rem which the linker refuses (LNK2005/LNK1169); scripts\prepare-windows-skia.py
 rem renames it in the archive, and this does the same to a Skia that was built
 rem from source instead. Naming an already-renamed symbol is an error, hence 2>nul.
 for /d %%d in (target\release\build\skia-bindings-*) do (
-  if exist "%%d\out\skia\skia.lib" "C:\Program Files\LLVM\bin\llvm-objcopy.exe" --redefine-sym jpeg_natural_order=yapfast_skia_jpeg_natural_order "%%d\out\skia\skia.lib" 2>nul
-  if exist "%%d\out\skia\skia-bindings.lib" "C:\Program Files\LLVM\bin\llvm-objcopy.exe" --redefine-sym jpeg_natural_order=yapfast_skia_jpeg_natural_order "%%d\out\skia\skia-bindings.lib" 2>nul
+  if exist "%%d\out\skia\skia.lib" "X:\Dev\tools\llvm\bin\llvm-objcopy.exe" --redefine-sym jpeg_natural_order=yapfast_skia_jpeg_natural_order "%%d\out\skia\skia.lib" 2>nul
+  if exist "%%d\out\skia\skia-bindings.lib" "X:\Dev\tools\llvm\bin\llvm-objcopy.exe" --redefine-sym jpeg_natural_order=yapfast_skia_jpeg_natural_order "%%d\out\skia\skia-bindings.lib" 2>nul
 )
 echo Building %VERSION% as a release...
 cargo build --release
