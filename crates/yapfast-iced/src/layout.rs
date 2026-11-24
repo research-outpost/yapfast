@@ -233,6 +233,9 @@ pub struct Prefs {
     pub server_tags: Option<bool>,
     pub badges: Option<bool>,
     pub background: Option<bool>,
+    /// Theme text glow: off, text keeps its shadow and outline but not the
+    /// soft edge, which costs sixteen draws a piece.
+    pub text_glow: Option<bool>,
     /// Notifications: shown, saying what messages say, flashing the
     /// taskbar.
     pub notifications: Option<bool>,

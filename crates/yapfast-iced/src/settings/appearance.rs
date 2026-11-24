@@ -224,6 +224,8 @@ pub enum Cosmetic {
     Background,
     /// The member list's activity cards, which keep their own pref.
     MemberActivity,
+    /// Theme text glow, which is drawing rather than a profile's cosmetic.
+    TextGlow,
 }
 
 pub(super) fn theme_message(event: Event) -> Message {
@@ -605,11 +607,17 @@ fn cosmetic(cx: &mut Cx<'_>, cosmetic: Cosmetic, on: bool) {
         Cosmetic::ServerTags => (&mut prefs.server_tags, "server_tags"),
         Cosmetic::Badges => (&mut prefs.badges, "badges"),
         Cosmetic::Background => (&mut prefs.background, "background"),
+        Cosmetic::TextGlow => (&mut prefs.text_glow, "text_glow"),
         Cosmetic::MemberActivity => return,
     };
     *slot = Some(on);
     cx.keep(key, on);
-    if cosmetic == Cosmetic::Nameplates {
+    if cosmetic == Cosmetic::TextGlow {
+        // Drawing, not data: the window shows it again and nothing is told
+        // the core.
+        cx.request(Request::Changed(Shown::Theme));
+        return;
+    } else if cosmetic == Cosmetic::Nameplates {
         cx.dispatch(Action::HideNameplates(!on));
     } else {
         let cosmetics = cx.layout.prefs.cosmetics();
@@ -751,6 +759,13 @@ impl<'a> Page<'a> {
                     "The tag and its badge beside people's names.",
                     cosmetics.server_tags,
                     Cosmetic::ServerTags,
+                ),
+                form::heading(theme, "THEME TEXT"),
+                profile(
+                    "Draw text glow",
+                    "The soft edge a theme puts round text. Off, text keeps its shadow and outline and skips sixteen extra draws a piece.",
+                    self.cx.layout.prefs.text_glow.unwrap_or(true),
+                    Cosmetic::TextGlow,
                 ),
                 form::heading(theme, "MEMBER LIST"),
                 profile(
