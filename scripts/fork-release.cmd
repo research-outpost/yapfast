@@ -21,7 +21,9 @@ if "%VERSION%"=="" (
 for /f "tokens=1 delims=-" %%v in ("%VERSION%") do set NUMVER=%%v
 
 set ROOT=%~dp0..
-set PATH=%USERPROFILE%\.cargo\bin;X:\Dev\tools\inno;%PATH%
+set PATH=%USERPROFILE%\.cargo\bin;X:\Dev\tools\inno;X:\Dev\tools\llvm\bin;X:\Dev\tools\ninja;X:\Dev\tools\nasm;%PATH%
+rem ffmpeg-src builds with clang-cl, and bindgen and thorvg want libclang
+set LIBCLANG_PATH=X:\Dev\tools\llvm\bin
 set YAPFAST_RELEASE=1
 set YAPFAST_VERSION=%VERSION%
 
