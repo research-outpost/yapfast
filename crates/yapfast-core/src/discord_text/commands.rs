@@ -938,7 +938,7 @@ fn forward(
     {
         return fail(format!(
             "The message you added is over {} characters.",
-            if limit > MAX_CHARS { "4,000" } else { "2,000" }
+            "2,000"
         ));
     }
     let (discord, events) = (discord.clone(), events.clone());

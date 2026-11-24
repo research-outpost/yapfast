@@ -2155,7 +2155,7 @@ fn a_message_too_long_names_the_accounts_own_limit() {
         too_long(yapfast_discord::api::message_limit(0)).ends_with("at most 2,000 characters.")
     );
     assert!(
-        too_long(yapfast_discord::api::message_limit(2)).ends_with("at most 4,000 characters.")
+        too_long(yapfast_discord::api::message_limit(2)).ends_with("at most 2,000 characters.")
     );
 }
 

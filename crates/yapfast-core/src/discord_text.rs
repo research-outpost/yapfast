@@ -77,7 +77,7 @@ fn max_chars(discord: &Discord) -> usize {
 /// Why a message can't go: it's empty or over `limit` characters.
 fn too_long(limit: usize) -> &'static str {
     if limit > MAX_CHARS {
-        "Discord messages must contain text and be at most 4,000 characters."
+        "Discord messages must contain text and be at most 2,000 characters."
     } else {
         "Discord messages must contain text and be at most 2,000 characters."
     }

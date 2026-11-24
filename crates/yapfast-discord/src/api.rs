@@ -150,36 +150,20 @@ pub const ACK_BULK_LIMIT: usize = 100;
 
 const MIB: u64 = 1024 * 1024;
 
-/// The largest file this account may send, in bytes: by its Nitro, as
-/// [`crate::service::Account::premium_type`], or in a server boosted to
-/// `premium_tier` 2 or 3, by the server's, whichever allows more. These are
-/// Discord's limits since August 2026. Its client's own constant without
-/// Nitro is still 10 MiB, but the client raises every limit to at least
-/// 20 MiB before checking a file or naming the limit.
+/// The largest file this account may send, in bytes: this fork has no
+/// Nitro, so it is Discord's own floor, 20 MiB, whatever the account's
+/// `premium_type` or the server's boost tier says.
 pub fn upload_limit(premium_type: u8, premium_tier: Option<u8>) -> u64 {
-    let own = match premium_type {
-        2 => 500 * MIB,
-        1 | 3 => 50 * MIB,
-        _ => 20 * MIB,
-    };
-    let boosted = match premium_tier {
-        Some(3) => 100 * MIB,
-        Some(2) => 50 * MIB,
-        _ => 0,
-    };
-    own.max(boosted)
+    let _ = (premium_type, premium_tier);
+    20 * MIB
 }
 
-/// The longest message this account may send or edit to, in characters, by
-/// its Nitro, as [`crate::service::Account::premium_type`]: 4,000 with
-/// Nitro (2) alone, whose perks are the only ones in Discord's client with
-/// `INCREASED_MESSAGE_LENGTH`; 2,000 without, or with Nitro Classic (1) or
-/// Nitro Basic (3).
+/// The longest message this account may send or edit to, in characters:
+/// this fork has no Nitro, so it is Discord's own 2,000 whatever the
+/// account's `premium_type` says.
 pub fn message_limit(premium_type: u8) -> usize {
-    match premium_type {
-        2 => 4000,
-        _ => 2000,
-    }
+    let _ = premium_type;
+    2000
 }
 
 /// Discord answered a download with this error status.
@@ -2875,24 +2859,13 @@ mod tests {
     }
 
     #[test]
-    fn upload_limits_follow_nitro_and_boosts() {
-        use super::{MIB, upload_limit};
-        assert_eq!(upload_limit(0, None), 20 * MIB, "without Nitro");
-        assert_eq!(upload_limit(3, None), 50 * MIB, "Nitro Basic");
-        assert_eq!(upload_limit(2, None), 500 * MIB, "Nitro");
-        assert_eq!(upload_limit(0, Some(1)), 20 * MIB, "level 1 adds nothing");
-        assert_eq!(upload_limit(0, Some(2)), 50 * MIB);
-        assert_eq!(upload_limit(0, Some(3)), 100 * MIB);
-        assert_eq!(upload_limit(2, Some(3)), 500 * MIB, "the larger wins");
-    }
-
-    #[test]
-    fn message_limits_follow_nitro() {
-        use super::message_limit;
-        assert_eq!(message_limit(0), 2000, "without Nitro");
-        assert_eq!(message_limit(3), 2000, "Nitro Basic has no longer messages");
-        assert_eq!(message_limit(1), 2000, "nor has Nitro Classic");
-        assert_eq!(message_limit(2), 4000, "Nitro");
+    fn limits_are_discords_floor_whatever_the_account_wears() {
+        use super::{MIB, message_limit, upload_limit};
+        for premium in [0, 1, 2, 3] {
+            assert_eq!(message_limit(premium), 2000, "no Nitro in this fork");
+            assert_eq!(upload_limit(premium, None), 20 * MIB);
+            assert_eq!(upload_limit(premium, Some(3)), 20 * MIB);
+        }
     }
 
     #[test]
