@@ -217,6 +217,13 @@ mod tests {
     }
 
     #[test]
+    fn this_forks_release_is_stable_and_sorts_by_its_own_count() {
+        let info = build("0.5.0-fork.10", true, None, None);
+        assert_eq!(info.channel(), Channel::Stable);
+        assert_eq!(info.headline(), "Yapfast v0.5.0-fork.10");
+    }
+
+    #[test]
     fn a_build_outside_the_release_packaging_is_a_development_build() {
         // Cargo.toml's version is a stable release's, so it can't tell.
         let info = build("0.4.0", false, Some(COMMIT_FULL), Some("2026-11-09"));
