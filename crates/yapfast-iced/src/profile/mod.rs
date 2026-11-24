@@ -931,7 +931,12 @@ pub fn inks(ctx: crate::ctx::Ctx<'_>, look: &Look, mode: Mode) -> look::Inks {
     } else {
         ctx.look.theme.sidebar
     };
-    let colors = (!themed).then_some(look.profile().theme).flatten();
+    // A card with its covers off, or its background, takes the window's own
+    // colour, not the theme two colours the person set.
+    let own_colours = ctx.state.cosmetics.covers && ctx.state.cosmetics.background;
+    let colors = (!themed && own_colours)
+        .then_some(look.profile().theme)
+        .flatten();
     look::Inks::new(ctx.look.theme, colors, plain)
 }
 

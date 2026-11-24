@@ -176,9 +176,10 @@ pub(super) fn profile_body<'a>(
     let profile = look.profile();
     let inks = crate::profile::inks(ctx, look, mode);
     let metrics = mode.metrics();
-    // Covers off: the popup keeps who it is and the mutuals, and nothing of
-    // Discord's art; see "Profile switches" in docs/discord/people.md.
-    if mode == Mode::Card && !ctx.state.cosmetics.covers {
+    // Covers off: the card, popup or beside a DM, keeps who it is and the
+    // mutuals, and nothing of Discord's art; see "Profile switches" in
+    // docs/discord/people.md.
+    if matches!(mode, Mode::Card | Mode::Docked) && !ctx.state.cosmetics.covers {
         return plain_card(ctx, shown, &inks, width);
     }
     let theme = ctx.look.theme;
@@ -416,17 +417,16 @@ fn profile_top<'a>(
     let look = &shown.look;
     let profile = look.profile();
     let metrics = mode.metrics();
-    let (banner_height, avatar, pad) = (metrics.banner, metrics.avatar, metrics.pad);
-    // The banner: its picture, playing while shown, else the accent
-    // colour (the theme's first colour on a themed card), else the
-    // raised grey.
+    let (avatar, pad) = (metrics.avatar, metrics.pad);
+    // The background switch takes the banner with it: no strip, no picture,
+    // no accent or theme colour, so the card's own ground shows through.
+    let background = ctx.state.cosmetics.background;
+    let banner_height = if background { metrics.banner } else { 0.0 };
     let banner_size = Size::new(width, banner_height);
     // The card's own corners: a theme's `card` shape (Zine's square cut).
     let corner = ctx.look.theme.surface_radius("card", 12.0);
     let top_corners = [corner, corner, 0.0, 0.0];
-    // The background switch takes the banner picture and the theme's two
-    // colours with it: the card keeps the theme's own ground.
-    let background = ctx.state.cosmetics.background;
+
     let moving = background
         .then(|| {
             profile
@@ -487,17 +487,20 @@ fn profile_top<'a>(
     } else {
         face.on_press(Message::Profile(Event::Enlarge(None, mode == Mode::Docked)))
     };
-    let mut top = stack![
-        Space::new()
-            .width(Length::Fill)
-            .height(banner_height + avatar / 2.0 + 8.0),
-        banner,
-        container(Above::new(face, 10.0)).padding(Padding {
+    let mut top = stack![Space::new().width(Length::Fill).height(avatar / 2.0 + 8.0)];
+    if background {
+        top = top.push(banner);
+        top = top.push(container(Above::new(face, 10.0)).padding(Padding {
             top: banner_height - avatar / 2.0 - 6.0,
             left: pad - 6.0,
             ..Padding::ZERO
-        }),
-    ];
+        }));
+    } else {
+        top = top.push(container(Above::new(face, 10.0)).padding(Padding {
+            left: pad - 6.0,
+            ..Padding::ZERO
+        }));
+    }
     if !look.thought.is_empty() {
         top = top.push(thought_bubble(ctx, shown, mode, width, inks));
     }
@@ -1519,7 +1522,7 @@ fn plain_card<'a>(
                 .avatar
                 .as_deref()
                 .and_then(|url| crate::profile::profile_picture(ctx, shown, url, 24, 24, true))
-                .map(|picture| Pic::square(picture, 24.0));
+                .map(|picture| Pic::square(picture, 24.0).radius(12.0));
             let mut line = row![].spacing(8).align_y(Alignment::Center);
             if let Some(face) = face {
                 line = line.push(face);
@@ -1535,7 +1538,7 @@ fn plain_card<'a>(
                 .icon
                 .as_deref()
                 .and_then(|url| crate::profile::profile_picture(ctx, shown, url, 24, 24, true))
-                .map(|picture| Pic::square(picture, 24.0));
+                .map(|picture| Pic::square(picture, 24.0).radius(12.0));
             let mut line = row![].spacing(8).align_y(Alignment::Center);
             if let Some(icon) = icon {
                 line = line.push(icon);
@@ -1549,6 +1552,15 @@ fn plain_card<'a>(
             text("No mutual friends or servers.")
                 .size(14)
                 .color(theme.secondary),
+        );
+    }
+    if profile.created.is_some() || profile.joined.is_some() {
+        body = body.push(
+            column![
+                heading("MEMBER SINCE"),
+                member_since(ctx, shown, inks, true)
+            ]
+            .spacing(6),
         );
     }
     body.into()
