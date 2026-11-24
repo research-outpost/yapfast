@@ -19,7 +19,12 @@ fn main() {
 /// release's packaging sets `YAPFAST_RELEASE`: every other build, such as
 /// `cargo run`, is a development build.
 fn build_info() {
-    for name in ["YAPFAST_COMMIT", "YAPFAST_COMMIT_DATE", "YAPFAST_RELEASE"] {
+    for name in [
+        "YAPFAST_COMMIT",
+        "YAPFAST_COMMIT_DATE",
+        "YAPFAST_RELEASE",
+        "YAPFAST_VERSION",
+    ] {
         println!("cargo:rerun-if-env-changed={name}");
     }
     // Only this directory's own repository counts: source unpacked inside
@@ -67,6 +72,12 @@ fn build_info() {
     }
     if env::var_os("YAPFAST_RELEASE").is_some_and(|release| !release.is_empty()) {
         println!("cargo:rustc-env=YAPFAST_BUILD_RELEASE=1");
+    }
+    // This fork tags its releases (0.5.0-fork.N) while Cargo.toml stays at the
+    // upstream release they grew from, so the packaging passes the tag's
+    // version in. Without it About chases its own release forever.
+    if let Some(version) = env::var("YAPFAST_VERSION").ok().filter(|v| !v.is_empty()) {
+        println!("cargo:rustc-env=YAPFAST_BUILD_VERSION={version}");
     }
 }
 

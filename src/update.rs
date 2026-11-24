@@ -19,10 +19,10 @@ pub mod signature;
 
 /// Where Yapfast's releases are listed. Thirty reach the newest stable release
 /// behind a run of nightlies.
-const RELEASES: &str = "https://api.github.com/repos/yapfast/yapfast/releases?per_page=30";
+const RELEASES: &str = "https://api.github.com/repos/research-outpost/yapfast/releases?per_page=30";
 
 /// Where a release's page is, for the browser to open: only this project's.
-const PAGES: &str = "https://github.com/yapfast/yapfast/releases/";
+const PAGES: &str = "https://github.com/research-outpost/yapfast/releases/";
 
 /// A SemVer version, as `scripts/set-version` allows them: a core of three
 /// numbers and a dotted prerelease part. Build metadata is dropped, as it
@@ -482,7 +482,7 @@ mod tests {
         Release {
             version: version(tag),
             tag: tag.into(),
-            page: format!("https://github.com/yapfast/yapfast/releases/tag/{tag}"),
+            page: format!("https://github.com/research-outpost/yapfast/releases/tag/{tag}"),
             assets: Vec::new(),
             notes: String::new(),
         }
@@ -497,7 +497,7 @@ mod tests {
             ### Fixes\n\n- fix(voice)!: keep the call: all of it by @a in 1234567\n\
             - Add navigation, calls and extras by @Fayberr in 1eb921958c4e5b3b2e87d9f2d4330dbaedc9fb0b\n\n\
             <details><summary>Other changes (1)</summary>\n\n- docs: hidden by @a in 1234567\n\n</details>\n\n\
-            All changes: https://github.com/yapfast/yapfast/compare/a...b\n\nOn Arch Linux, install it.";
+            All changes: https://github.com/research-outpost/yapfast/compare/a...b\n\nOn Arch Linux, install it.";
         assert_eq!(
             notes_of(body),
             "Features\n\u{2022} Fold long messages with Show more\n\u{2022} Add Developer Mode\n\n\
@@ -569,7 +569,7 @@ mod tests {
     fn a_listing_leaves_out_drafts_and_odd_tags() {
         let json = br#"[
             {"tag_name": "v0.4.0", "draft": false, "prerelease": false,
-             "html_url": "https://github.com/yapfast/yapfast/releases/tag/v0.4.0",
+             "html_url": "https://github.com/research-outpost/yapfast/releases/tag/v0.4.0",
              "assets": [{"name": "SHA256SUMS.txt", "browser_download_url": "https://example.test/sums", "size": 12}]},
             {"tag_name": "v0.5.0", "draft": true, "html_url": ""},
             {"tag_name": "preview", "draft": false, "html_url": ""},
@@ -581,12 +581,12 @@ mod tests {
         assert_eq!(releases[0].assets[0].size, 12);
         assert_eq!(
             releases[0].page,
-            "https://github.com/yapfast/yapfast/releases/tag/v0.4.0"
+            "https://github.com/research-outpost/yapfast/releases/tag/v0.4.0"
         );
         // A page elsewhere isn't opened.
         assert_eq!(
             releases[1].page,
-            "https://github.com/yapfast/yapfast/releases/tag/v0.5.0-nightly.20261107.12"
+            "https://github.com/research-outpost/yapfast/releases/tag/v0.5.0-nightly.20261107.12"
         );
         assert!(parse_releases(b"{\"message\": \"rate limited\"}").is_err());
     }
