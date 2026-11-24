@@ -3326,6 +3326,7 @@ pub enum DiscordCommand {
         user: String,
         effect: bool,
         frame: bool,
+        badges: bool,
     },
     /// Download server icons and avatars by address. Each that arrives comes
     /// back as [`Event::Picture`]; one that fails doesn't.

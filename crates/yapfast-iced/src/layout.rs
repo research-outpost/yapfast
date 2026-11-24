@@ -226,12 +226,13 @@ pub struct Prefs {
     pub animate: Animate,
     /// Appearance's profile switches, and nameplates.
     pub nameplates: Option<bool>,
-    pub profile_effects: Option<bool>,
+    pub profile_covers: Option<bool>,
     pub decorations: Option<bool>,
     pub moving_cosmetics: Option<bool>,
     pub name_styles: Option<bool>,
     pub server_tags: Option<bool>,
-    pub profile_frames: Option<bool>,
+    pub badges: Option<bool>,
+    pub background: Option<bool>,
     /// Notifications: shown, saying what messages say, flashing the
     /// taskbar.
     pub notifications: Option<bool>,
@@ -273,12 +274,13 @@ impl Prefs {
     pub fn cosmetics(&self) -> yapfast_core::application::Cosmetics {
         let default = yapfast_core::application::Cosmetics::default();
         yapfast_core::application::Cosmetics {
-            effects: self.profile_effects.unwrap_or(default.effects),
+            covers: self.profile_covers.unwrap_or(default.covers),
             decorations: self.decorations.unwrap_or(default.decorations),
             moving: self.moving_cosmetics.unwrap_or(default.moving),
             name_styles: self.name_styles.unwrap_or(default.name_styles),
             server_tags: self.server_tags.unwrap_or(default.server_tags),
-            frames: self.profile_frames.unwrap_or(default.frames),
+            badges: self.badges.unwrap_or(default.badges),
+            background: self.background.unwrap_or(default.background),
         }
     }
 

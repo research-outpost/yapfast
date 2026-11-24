@@ -2918,7 +2918,7 @@ fn pictures_on_screen<'a>(
                             .iter()
                             .find(|effect| effect.sku == sku)
                     });
-                    [&profile.avatar, &profile.banner]
+                    [&profile.avatar]
                         .into_iter()
                         .chain(
                             profile
@@ -2928,6 +2928,8 @@ fn pictures_on_screen<'a>(
                         )
                         .chain(profile.friends.iter().map(|friend| &friend.avatar))
                         .filter_map(Option::as_deref)
+                        // A background switched off asks for no banner picture.
+                        .chain(cosmetics.background(profile.banner.as_deref()))
                         .chain(cosmetics.decoration(profile.decoration.as_deref()))
                         .chain(tag_badge(cosmetics, &profile.tag))
                         .chain(
@@ -2947,10 +2949,17 @@ fn pictures_on_screen<'a>(
                                     .map(|layer| layer.src.as_str()),
                             )
                         }))
-                        .chain(profile.badges.iter().flat_map(|badge| {
-                            std::iter::once(badge.icon.as_str())
-                                .chain(badge.level.iter().map(|level| level.picture.as_str()))
-                        }))
+                        .chain(
+                            cosmetics
+                                .badges(&profile.badges)
+                                .into_iter()
+                                .flatten()
+                                .flat_map(|badge| {
+                                    std::iter::once(badge.icon.as_str()).chain(
+                                        badge.level.iter().map(|level| level.picture.as_str()),
+                                    )
+                                }),
+                        )
                 }),
         )
         .chain(

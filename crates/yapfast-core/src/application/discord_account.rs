@@ -119,9 +119,10 @@ impl Application {
             vec![Effect::Backend(Command::Discord(DiscordCommand::Profile {
                 room,
                 user: person,
-                effect: self.state.cosmetics.effects,
+                effect: self.state.cosmetics.covers,
                 // The DM's panel draws no frame, so nothing of one is fetched.
                 frame: false,
+                badges: self.state.cosmetics.badges,
             }))]
         } else {
             vec![]

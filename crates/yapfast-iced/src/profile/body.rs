@@ -176,6 +176,11 @@ pub(super) fn profile_body<'a>(
     let profile = look.profile();
     let inks = crate::profile::inks(ctx, look, mode);
     let metrics = mode.metrics();
+    // Covers off: the popup keeps who it is and the mutuals, and nothing of
+    // Discord's art; see "Profile switches" in docs/discord/people.md.
+    if mode == Mode::Card && !ctx.state.cosmetics.covers {
+        return plain_card(ctx, shown, &inks, width);
+    }
     let theme = ctx.look.theme;
     let mut body = column![].spacing(12).padding([0.0, metrics.pad]);
     // Discord's panel beside a DM names a private profile in a bar above
@@ -212,11 +217,16 @@ pub(super) fn profile_body<'a>(
     // Discord's card has the badges beside the username, up to six of
     // them (any number in the DM's panel); more go under the name, 2 px
     // below it, and the panel's own keep to their row below.
-    let beside = !mode.large()
+    let beside = ctx.state.cosmetics.badges
+        && !mode.large()
         && !profile.handle.is_empty()
         && !profile.badges.is_empty()
         && (mode == Mode::Docked || profile.badges.len() <= 6);
-    let under = mode == Mode::Card && !ctx.state.preview && !beside && !profile.badges.is_empty();
+    let under = ctx.state.cosmetics.badges
+        && mode == Mode::Card
+        && !ctx.state.preview
+        && !beside
+        && !profile.badges.is_empty();
     let mut names = column![name].spacing(2);
     if let Some(line) = handle_line(ctx, shown, &inks, mode, beside) {
         names = names.push(line);
@@ -230,7 +240,7 @@ pub(super) fn profile_body<'a>(
     {
         body = body.push(actions);
     }
-    if !profile.badges.is_empty() && !beside && !under {
+    if ctx.state.cosmetics.badges && !profile.badges.is_empty() && !beside && !under {
         body = body.push(badge_rows(ctx, shown));
     }
     // Discord's card shows the first activity on its own tile, with the
@@ -414,17 +424,38 @@ fn profile_top<'a>(
     // The card's own corners: a theme's `card` shape (Zine's square cut).
     let corner = ctx.look.theme.surface_radius("card", 12.0);
     let top_corners = [corner, corner, 0.0, 0.0];
-    let moving = profile
-        .banner
-        .as_deref()
-        .and_then(chat::moving_banner)
-        .and_then(|url| ctx.moving(&url, banner_size, Rectangle::with_size(banner_size), true));
-    let still = profile.banner.as_deref().and_then(|url| {
-        crate::profile::profile_picture(ctx, shown, url, width as u32, banner_height as u32, true)
-    });
-    let banner_ground = crate::profile::banner_ground(ctx, shown)
-        .map(hex)
-        .or(inks.themed.then_some(inks.primary))
+    // The background switch takes the banner picture and the theme's two
+    // colours with it: the card keeps the theme's own ground.
+    let background = ctx.state.cosmetics.background;
+    let moving = background
+        .then(|| {
+            profile
+                .banner
+                .as_deref()
+                .and_then(chat::moving_banner)
+                .and_then(|url| {
+                    ctx.moving(&url, banner_size, Rectangle::with_size(banner_size), true)
+                })
+        })
+        .flatten();
+    let still = background
+        .then(|| {
+            profile.banner.as_deref().and_then(|url| {
+                crate::profile::profile_picture(
+                    ctx,
+                    shown,
+                    url,
+                    width as u32,
+                    banner_height as u32,
+                    true,
+                )
+            })
+        })
+        .flatten();
+    let banner_ground = background
+        .then(|| crate::profile::banner_ground(ctx, shown).map(hex))
+        .flatten()
+        .or(background.then_some(inks.primary).filter(|_| inks.themed))
         .unwrap_or(ctx.look.theme.raised);
     let mut banner = stack![
         container(Space::new())
@@ -1444,4 +1475,81 @@ fn activity_tiles<'a>(
 /// A tile's colour with the pointer's wash over it.
 fn mix_tile(tile: Color, hover: Color) -> Color {
     crate::theme::mix(tile, Color { a: 1.0, ..hover }, hover.a)
+}
+
+/// The popup with covers off: the face, the name, and who this account
+/// shares with them — mutual friends, then mutual servers — with none of
+/// Discord's art above or round the card.
+fn plain_card<'a>(
+    ctx: crate::ctx::Ctx<'a>,
+    shown: &'a Shown,
+    inks: &Inks,
+    _width: f32,
+) -> Element<'a, Message> {
+    let profile = shown.look.profile();
+    let theme = ctx.look.theme;
+    let avatar = profile_avatar(ctx, shown, 64.0, false, inks.ground, Mode::Card);
+    let mut who = column![
+        text(profile.name.as_str())
+            .size(20)
+            .font(BOLD)
+            .color(theme.text)
+    ]
+    .spacing(2);
+    if !profile.handle.is_empty() {
+        who = who.push(
+            text(profile.handle.as_str())
+                .size(13)
+                .color(theme.secondary),
+        );
+    }
+    let mut body = column![
+        row![avatar]
+            .spacing(12)
+            .align_y(Alignment::Center)
+            .push(who)
+    ]
+    .spacing(16)
+    .padding([12.0, 16.0]);
+    let heading = |words: &'static str| text(words).size(12).font(BOLD).color(theme.secondary);
+    if !profile.friends.is_empty() {
+        let mut rows = column![heading("MUTUAL FRIENDS")].spacing(6);
+        for friend in &profile.friends {
+            let face = friend
+                .avatar
+                .as_deref()
+                .and_then(|url| crate::profile::profile_picture(ctx, shown, url, 24, 24, true))
+                .map(|picture| Pic::square(picture, 24.0));
+            let mut line = row![].spacing(8).align_y(Alignment::Center);
+            if let Some(face) = face {
+                line = line.push(face);
+            }
+            rows = rows.push(line.push(text(friend.name.as_str()).size(14).color(theme.text)));
+        }
+        body = body.push(rows);
+    }
+    if !profile.servers.is_empty() {
+        let mut rows = column![heading("MUTUAL SERVERS")].spacing(6);
+        for server in &profile.servers {
+            let icon = server
+                .icon
+                .as_deref()
+                .and_then(|url| crate::profile::profile_picture(ctx, shown, url, 24, 24, true))
+                .map(|picture| Pic::square(picture, 24.0));
+            let mut line = row![].spacing(8).align_y(Alignment::Center);
+            if let Some(icon) = icon {
+                line = line.push(icon);
+            }
+            rows = rows.push(line.push(text(server.name.as_str()).size(14).color(theme.text)));
+        }
+        body = body.push(rows);
+    }
+    if profile.friends.is_empty() && profile.servers.is_empty() {
+        body = body.push(
+            text("No mutual friends or servers.")
+                .size(14)
+                .color(theme.secondary),
+        );
+    }
+    body.into()
 }

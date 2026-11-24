@@ -539,8 +539,7 @@ fn a_cards_effect_plays_only_under_the_pointer_and_its_frame_shows() {
     );
     // With effects and frames switched off, neither is asked for.
     change(&mut app, |state| {
-        state.cosmetics.effects = false;
-        state.cosmetics.frames = false;
+        state.cosmetics.covers = false;
     });
     assert!(!wanted(&app, "effect-still"));
     assert!(!wanted(&app, "frame-staple"));

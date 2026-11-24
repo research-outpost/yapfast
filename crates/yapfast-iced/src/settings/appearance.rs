@@ -135,13 +135,14 @@ pub enum Event {
 /// Appearance's profile switches.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Cosmetic {
-    Effects,
+    Covers,
     Decorations,
     Nameplates,
     Moving,
     NameStyles,
     ServerTags,
-    Frames,
+    Badges,
+    Background,
 }
 
 pub(super) fn theme_message(event: Event) -> Message {
@@ -472,13 +473,14 @@ fn change_sound_prefs(
 fn cosmetic(cx: &mut Cx<'_>, cosmetic: Cosmetic, on: bool) {
     let prefs = &mut cx.layout.prefs;
     let (slot, key) = match cosmetic {
-        Cosmetic::Effects => (&mut prefs.profile_effects, "profile_effects"),
+        Cosmetic::Covers => (&mut prefs.profile_covers, "profile_covers"),
         Cosmetic::Decorations => (&mut prefs.decorations, "decorations"),
         Cosmetic::Nameplates => (&mut prefs.nameplates, "nameplates"),
         Cosmetic::Moving => (&mut prefs.moving_cosmetics, "moving_cosmetics"),
         Cosmetic::NameStyles => (&mut prefs.name_styles, "name_styles"),
         Cosmetic::ServerTags => (&mut prefs.server_tags, "server_tags"),
-        Cosmetic::Frames => (&mut prefs.profile_frames, "profile_frames"),
+        Cosmetic::Badges => (&mut prefs.badges, "badges"),
+        Cosmetic::Background => (&mut prefs.background, "background"),
     };
     *slot = Some(on);
     cx.keep(key, on);
@@ -578,10 +580,22 @@ impl<'a> Page<'a> {
             column![
                 form::heading(theme, "PROFILES"),
                 profile(
-                    "Play profile effects",
-                    "The animations some people put over their profile cards.",
-                    cosmetics.effects,
-                    Cosmetic::Effects,
+                    "Show profile covers",
+                    "The animation some people put over their profile card and the frame round it. Off, the card that opens on a person is their name and the friends and servers you share.",
+                    cosmetics.covers,
+                    Cosmetic::Covers,
+                ),
+                profile(
+                    "Show badges",
+                    "The badges Discord lists on a profile, and the levels its tooltips show.",
+                    cosmetics.badges,
+                    Cosmetic::Badges,
+                ),
+                profile(
+                    "Show profile backgrounds",
+                    "The banner picture and the theme colours at the top of a profile card.",
+                    cosmetics.background,
+                    Cosmetic::Background,
                 ),
                 profile(
                     "Show avatar decorations",
@@ -612,12 +626,6 @@ impl<'a> Page<'a> {
                     "The tag and its badge beside people's names.",
                     cosmetics.server_tags,
                     Cosmetic::ServerTags,
-                ),
-                profile(
-                    "Show profile frames",
-                    "The frames some people put around their profile cards.",
-                    cosmetics.frames,
-                    Cosmetic::Frames,
                 ),
             ]
             .spacing(12)

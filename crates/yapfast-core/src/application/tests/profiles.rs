@@ -244,12 +244,13 @@ fn profile_switches_that_are_off_ask_for_nothing() {
         (app, effect)
     };
     let off = Cosmetics {
-        effects: false,
+        covers: false,
         decorations: false,
         moving: false,
         name_styles: false,
         server_tags: false,
-        frames: false,
+        badges: false,
+        background: false,
     };
     let (app, effect) = open(off);
     assert_eq!(
@@ -272,15 +273,16 @@ fn profile_switches_that_are_off_ask_for_nothing() {
         assert!(app.requested_pictures.contains("mine.png"));
         assert!(app.requested_pictures.contains("plate.png"));
     }
-    // Effects alone off asks for no effect, and still for decorations.
+    // Covers are one switch: off, the effect and the frame both go, and
+    // decorations stay.
     let (app, effect) = open(Cosmetics {
-        effects: false,
+        covers: false,
         ..Cosmetics::default()
     });
     assert_eq!(
         effect,
-        Some((false, true)),
-        "an effect that may not play isn't asked about"
+        Some((false, false)),
+        "a cover that may not show isn't asked about"
     );
     assert!(app.requested_pictures.contains("ring.png"));
 }

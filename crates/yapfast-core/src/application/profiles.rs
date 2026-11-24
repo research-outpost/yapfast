@@ -207,8 +207,9 @@ impl Application {
             vec![Effect::Backend(Command::Discord(DiscordCommand::Profile {
                 room,
                 user,
-                effect: self.state.cosmetics.effects,
-                frame: self.state.cosmetics.frames,
+                effect: self.state.cosmetics.covers,
+                frame: self.state.cosmetics.covers,
+                badges: self.state.cosmetics.badges,
             }))]
         } else {
             vec![]
@@ -267,6 +268,7 @@ impl Application {
             user,
             effect: false,
             frame: false,
+            badges: self.state.cosmetics.badges,
         }))]
     }
 
