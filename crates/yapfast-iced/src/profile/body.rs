@@ -15,8 +15,8 @@ use iced::{
 use yapfast_core::chat::{self, Presence};
 
 use super::{
-    Event, MESSAGE_FIELD, Mode, NOTE_FIELD, Shown, StyledName, WIDTH, frame_style,
-    look::{Inks, Offer, Tab},
+    Event, MESSAGE_FIELD, Mode, NOTE_FIELD, Shown, StyledName, WIDTH, activity, frame_style,
+    look::{Inks, Offer, Tab, timer},
 };
 use crate::{
     app::Message,
@@ -1525,6 +1525,10 @@ fn plain_card<'a>(
     if let Some(bio) = shown.look.bio.as_deref() {
         body = body.push(bio_view(ctx, bio, inks, Mode::Docked));
     }
+    // What they're doing, in words and the kind's icon, as MEMBER SINCE is.
+    if let Some(activity) = activity_plain(ctx, shown) {
+        body = body.push(column![heading("ACTIVITY"), activity].spacing(6));
+    }
     if !profile.friends.is_empty() {
         let mut rows = column![heading("MUTUAL FRIENDS")].spacing(6);
         for friend in &profile.friends {
@@ -1582,4 +1586,41 @@ fn plain_card<'a>(
             .into(),
         _ => body.into(),
     }
+}
+
+/// One activity in plain words: its kind's icon, "Playing VRChat", the lines
+/// under the title and how long it has run, in the live green.
+fn activity_plain<'a>(ctx: crate::ctx::Ctx<'a>, shown: &'a Shown) -> Option<Element<'a, Message>> {
+    let activity = shown.look.activities.first()?;
+    let theme = ctx.look.theme;
+    let kind = Icon::activity(activity.icon).unwrap_or(Icon::Gamepad);
+    let mut words = column![].spacing(2);
+    let title = if activity.heading.is_empty() {
+        activity.name.clone()
+    } else {
+        format!("{} {}", activity.heading, activity.name)
+    };
+    words = words.push(text(title).size(14).color(theme.text));
+    for line in &activity.lines {
+        words = words.push(text(line.as_str()).size(13).color(theme.secondary));
+    }
+    if let Some(since) = activity.since {
+        let until = activity.until;
+        words = words.push(
+            crate::widgets::live_text(std::time::Duration::from_secs(1), move || {
+                let now = until.map_or_else(activity::now_seconds, |until| {
+                    activity::now_seconds().min(until)
+                });
+                timer(now.saturating_sub(since))
+            })
+            .size(13)
+            .color(theme.live),
+        );
+    }
+    Some(
+        row![ctx.look.glyph(kind, 16, theme.secondary), words]
+            .spacing(8)
+            .align_y(Alignment::Center)
+            .into(),
+    )
 }

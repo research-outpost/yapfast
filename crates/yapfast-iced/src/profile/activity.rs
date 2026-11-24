@@ -39,7 +39,7 @@ fn sizes(big: bool) -> (f32, f32) {
 }
 
 /// Now, in Unix seconds, as the activities' times count.
-fn now_seconds() -> u64 {
+pub(super) fn now_seconds() -> u64 {
     yapfast_core::clock::now_ms() / 1000
 }
 
