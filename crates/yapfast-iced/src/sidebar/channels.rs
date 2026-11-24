@@ -94,7 +94,7 @@ impl<'a> super::View<'a> {
             ]
             .spacing(GAP)
             .padding(Padding {
-                top: 11.0,
+                top: 9.0,
                 bottom: 6.0,
                 ..Padding::ZERO
             })

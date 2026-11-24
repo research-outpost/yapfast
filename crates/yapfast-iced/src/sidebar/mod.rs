@@ -203,7 +203,7 @@ fn room(app: &App, width: f32) -> f32 {
     width.clamp(LEAST, most.clamp(LEAST, MOST))
 }
 /// Its header, the line under it included.
-pub const HEADER: f32 = 50.0;
+pub const HEADER: f32 = 51.0;
 /// A channel's row, a DM's, a category's heading, someone in a voice
 /// channel, and the gap after each row.
 pub const ROW: f32 = 32.0;

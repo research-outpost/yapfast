@@ -108,8 +108,15 @@ impl<'a> super::View<'a> {
                 line.into()
             }
         };
+        // The field keeps its 33 px; the extra pixel of HEADER goes between
+        // it and the line, which Discord's field sits 9 px above.
         let bar_ = container(inner)
-            .padding(INSET)
+            .padding(Padding {
+                top: INSET,
+                bottom: INSET + 1.0,
+                left: INSET,
+                right: INSET,
+            })
             .height(HEADER - 1.0)
             .width(Length::Fill);
         let banner = head.banner.as_deref().filter(|_| head.server.is_some());
