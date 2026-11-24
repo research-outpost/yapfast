@@ -1593,7 +1593,6 @@ fn plain_card<'a>(
 fn activity_plain<'a>(ctx: crate::ctx::Ctx<'a>, shown: &'a Shown) -> Option<Element<'a, Message>> {
     let activity = shown.look.activities.first()?;
     let theme = ctx.look.theme;
-    let kind = Icon::activity(activity.icon).unwrap_or(Icon::Gamepad);
     let mut words = column![].spacing(2);
     let title = if activity.heading.is_empty() {
         activity.name.clone()
@@ -1617,10 +1616,5 @@ fn activity_plain<'a>(ctx: crate::ctx::Ctx<'a>, shown: &'a Shown) -> Option<Elem
             .color(theme.live),
         );
     }
-    Some(
-        row![ctx.look.glyph(kind, 16, theme.secondary), words]
-            .spacing(8)
-            .align_y(Alignment::Center)
-            .into(),
-    )
+    Some(words.into())
 }
