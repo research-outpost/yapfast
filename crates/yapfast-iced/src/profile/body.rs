@@ -1515,6 +1515,15 @@ fn plain_card<'a>(
     .spacing(16)
     .padding([12.0, 16.0]);
     let heading = |words: &'static str| text(words).size(12).font(BOLD).color(theme.secondary);
+    // Their status in plain words, then their bio, as Discord puts them
+    // under the name: no bubble and no card ground either way.
+    let thought = &shown.look.thought;
+    if !thought.words.is_empty() {
+        body = body.push(text(thought.words.as_str()).size(14).color(theme.text));
+    }
+    if let Some(bio) = shown.look.bio.as_deref() {
+        body = body.push(bio_view(ctx, bio, inks, Mode::Docked));
+    }
     if !profile.friends.is_empty() {
         let mut rows = column![heading("MUTUAL FRIENDS")].spacing(6);
         for friend in &profile.friends {
