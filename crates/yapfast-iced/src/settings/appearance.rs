@@ -143,6 +143,9 @@ pub enum Cosmetic {
     ServerTags,
     Badges,
     Background,
+    /// The member list's Activity cards, which are no cosmetic of a profile:
+    /// the switch keeps its own pref.
+    MemberActivity,
 }
 
 pub(super) fn theme_message(event: Event) -> Message {
@@ -471,6 +474,15 @@ fn change_sound_prefs(
 
 /// A profile switch: kept, and the core told what may now show.
 fn cosmetic(cx: &mut Cx<'_>, cosmetic: Cosmetic, on: bool) {
+    // The member list's Activity cards aren't a profile's cosmetic: the core
+    // holds whether they show, and the layout keeps it.
+    if cosmetic == Cosmetic::MemberActivity {
+        cx.layout.activity_cards_hidden = !on;
+        cx.keep("activity_cards_hidden", !on);
+        cx.dispatch(Action::ActivityCardsHidden(!on));
+        cx.request(Request::Changed(Shown::Roster));
+        return;
+    }
     let prefs = &mut cx.layout.prefs;
     let (slot, key) = match cosmetic {
         Cosmetic::Covers => (&mut prefs.profile_covers, "profile_covers"),
@@ -481,6 +493,7 @@ fn cosmetic(cx: &mut Cx<'_>, cosmetic: Cosmetic, on: bool) {
         Cosmetic::ServerTags => (&mut prefs.server_tags, "server_tags"),
         Cosmetic::Badges => (&mut prefs.badges, "badges"),
         Cosmetic::Background => (&mut prefs.background, "background"),
+        Cosmetic::MemberActivity => return,
     };
     *slot = Some(on);
     cx.keep(key, on);
@@ -626,6 +639,13 @@ impl<'a> Page<'a> {
                     "The tag and its badge beside people's names.",
                     cosmetics.server_tags,
                     Cosmetic::ServerTags,
+                ),
+                form::heading(theme, "MEMBER LIST"),
+                profile(
+                    "Show activity cards",
+                    "What people in the server are playing, above its member list. Off, the list starts at its members.",
+                    !self.cx.layout.activity_cards_hidden,
+                    Cosmetic::MemberActivity,
                 ),
             ]
             .spacing(12)
