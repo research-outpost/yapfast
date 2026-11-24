@@ -1,6 +1,6 @@
 [package]
 name = "yapfast"
-version = "0.4.1"
+version = "0.5.0-fork.10"
 edition = "2024"
 rust-version = "1.97"
 publish = false
