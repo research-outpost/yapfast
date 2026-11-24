@@ -180,7 +180,7 @@ pub(super) fn profile_body<'a>(
     // mutuals, and nothing of Discord's art; see "Profile switches" in
     // docs/discord/people.md.
     if matches!(mode, Mode::Card | Mode::Docked) && !ctx.state.cosmetics.covers {
-        return plain_card(ctx, shown, &inks, width);
+        return plain_card(ctx, shown, &inks, width, mode);
     }
     let theme = ctx.look.theme;
     let mut body = column![].spacing(12).padding([0.0, metrics.pad]);
@@ -1488,6 +1488,7 @@ fn plain_card<'a>(
     shown: &'a Shown,
     inks: &Inks,
     _width: f32,
+    mode: Mode,
 ) -> Element<'a, Message> {
     let profile = shown.look.profile();
     let theme = ctx.look.theme;
@@ -1572,5 +1573,13 @@ fn plain_card<'a>(
             .spacing(6),
         );
     }
-    body.into()
+    // The popup floats over the window, so it brings the card's own ground
+    // with it; the panel beside a DM is framed by its view already.
+    match mode {
+        Mode::Card => container(body)
+            .width(WIDTH)
+            .style(frame_style(*inks, theme, theme.edge, 12.0, true))
+            .into(),
+        _ => body.into(),
+    }
 }
