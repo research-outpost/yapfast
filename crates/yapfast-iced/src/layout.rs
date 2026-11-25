@@ -236,6 +236,9 @@ pub struct Prefs {
     pub decorations: Option<bool>,
     pub moving_cosmetics: Option<bool>,
     pub name_styles: Option<bool>,
+    /// Role colour gradients: a gradient or holographic role colour runs
+    /// across the name; off, the role's first colour alone.
+    pub name_colours: Option<bool>,
     pub server_tags: Option<bool>,
 
     pub badges: Option<bool>,
@@ -319,6 +322,7 @@ impl Prefs {
             decorations: self.decorations.unwrap_or(default.decorations),
             moving: self.moving_cosmetics.unwrap_or(default.moving),
             name_styles: self.name_styles.unwrap_or(default.name_styles),
+            name_colours: self.name_colours.unwrap_or(default.name_colours),
             server_tags: self.server_tags.unwrap_or(default.server_tags),
             badges: self.badges.unwrap_or(default.badges),
             background: self.background.unwrap_or(default.background),

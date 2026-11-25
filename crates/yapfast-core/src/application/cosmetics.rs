@@ -19,6 +19,9 @@ pub struct Cosmetics {
     pub moving: bool,
     /// Display names show in the font and colours their person picked.
     pub name_styles: bool,
+    /// A role whose colour is a gradient or holographic one draws it across
+    /// the name, letter by letter. Off, names keep the role's first colour.
+    pub name_colours: bool,
     /// Server tags show beside names, with their badges.
     pub server_tags: bool,
     /// Badges show on a card: a picture each, and one levels request per
@@ -38,6 +41,7 @@ impl Default for Cosmetics {
             decorations: true,
             moving: true,
             name_styles: true,
+            name_colours: true,
             server_tags: true,
             badges: true,
             background: true,
@@ -59,6 +63,11 @@ impl Cosmetics {
     /// A display name's style, if styles show.
     pub fn style<T>(self, style: Option<T>) -> Option<T> {
         style.filter(|_| self.name_styles)
+    }
+
+    /// A role colour's gradient ends, if names draw gradients.
+    pub fn colours<T>(self, end: Option<T>) -> Option<T> {
+        end.filter(|_| self.name_colours)
     }
 
     /// A profile's frame, if covers show.
@@ -93,6 +102,7 @@ mod tests {
             decorations: false,
             moving: false,
             name_styles: false,
+            name_colours: false,
             server_tags: false,
             badges: false,
             background: false,
@@ -100,6 +110,7 @@ mod tests {
         assert_eq!(off.decoration(Some("https://cdn/static")), None);
         assert_eq!(off.tag(Some(&"TAG")), None);
         assert_eq!(off.style(Some(1)), None);
+        assert_eq!(off.colours(Some((1, Some(2)))), None);
         assert_eq!(off.effect(Some("sku")), None);
         assert_eq!(off.frame(Some("sku")), None);
         assert_eq!(off.badges(vec!["a"]), None);
@@ -112,6 +123,7 @@ mod tests {
         assert_eq!(on.decoration(Some("url")), Some("url"));
         assert_eq!(on.tag(Some(&"TAG")), Some(&"TAG"));
         assert_eq!(on.style(Some(1)), Some(1));
+        assert_eq!(on.colours(Some((1, Some(2)))), Some((1, Some(2))));
         assert_eq!(on.effect(Some("sku")), Some("sku"));
         assert_eq!(on.frame(Some("sku")), Some("sku"));
         assert_eq!(on.badges(1), Some(1));

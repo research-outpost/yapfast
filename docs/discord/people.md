@@ -903,6 +903,7 @@ window draws carry no address for it, so the window asks for nothing either.
 | Show nameplates (`nameplates`) | No nameplate in member lists or on the account's card (`AppState::hide_nameplates`) | On |
 | Animate decorations and nameplates (`moving_cosmetics`) | Their `/animated` APNG is never asked for (`animated_url` gives none), so only the still is fetched and decoded | On |
 | Show name styles (`name_styles`) | Names in the UI's typeface and the theme's colour | On |
+| Draw role colour gradients (`name_colours`) | A gradient or holographic role colour's name in the role's first colour, one span instead of one a letter | On |
 | Show server tags (`server_tags`) | No tag chip, and no badge picture | On |
 | Show profile frames (`profile_frames`) | No `/collectibles-products/` request for a profile's frame (`DiscordCommand::Profile`'s `frame`), and none of its layers | On |
 

@@ -244,6 +244,9 @@ pub enum Cosmetic {
     Nameplates,
     Moving,
     NameStyles,
+    /// Role colour gradients, which are drawing rather than a profile's
+    /// cosmetic.
+    NameColours,
     ServerTags,
     Badges,
     Background,
@@ -796,6 +799,7 @@ fn cosmetic(cx: &mut Cx<'_>, cosmetic: Cosmetic, on: bool) {
         Cosmetic::Nameplates => (&mut prefs.nameplates, "nameplates"),
         Cosmetic::Moving => (&mut prefs.moving_cosmetics, "moving_cosmetics"),
         Cosmetic::NameStyles => (&mut prefs.name_styles, "name_styles"),
+        Cosmetic::NameColours => (&mut prefs.name_colours, "name_colours"),
         Cosmetic::ServerTags => (&mut prefs.server_tags, "server_tags"),
         Cosmetic::Badges => (&mut prefs.badges, "badges"),
         Cosmetic::Background => (&mut prefs.background, "background"),
@@ -972,6 +976,12 @@ impl<'a> Page<'a> {
                     "The fonts and colours people give their display names.",
                     cosmetics.name_styles,
                     Cosmetic::NameStyles,
+                ),
+                profile(
+                    "Draw role colour gradients",
+                    "A role whose colour is a gradient or holographic one runs across the name, letter by letter, as Discord draws it. Off, names keep the role's first colour and skip a span a letter.",
+                    cosmetics.name_colours,
+                    Cosmetic::NameColours,
                 ),
                 profile(
                     "Show server tags",
