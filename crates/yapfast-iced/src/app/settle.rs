@@ -234,10 +234,7 @@ impl App {
                     Request::KeepEmoji { near, first } => {
                         crate::picker::keep_emoji(self, near, first);
                     }
-                    Request::Restart => {
-                        crate::exit_for(crate::Exit::Restart);
-                        tasks.push(self.quit());
-                    }
+                    Request::Restart => tasks.push(self.restart()),
                     Request::PlaceEmoji { target, key } => {
                         tasks.push(crate::picker::place_emoji(self, target, key));
                     }
@@ -319,6 +316,7 @@ impl App {
                 self.shown_protected = self.protected();
                 self.show_wanted_theme();
             }
+            Pref::DesktopIcon(target) => task = self.change_desktop_icon(target),
             Pref::Noise => {
                 let suppressor = self.layout.voice.noise_suppression;
                 if suppressor != yapfast_core::noise::Suppressor::Off {

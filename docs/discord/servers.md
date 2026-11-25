@@ -52,11 +52,14 @@ copying them.
   editor](people.md#editing-ones-server-profile).
 - Roles needs Manage Roles in the server, whatever the channel's overwrites
   say. Its submenu lists the roles this account can give or take, highest
-  first, ticked where they hold it. A role at or above this account's highest,
+  first, ticked where they hold it, and scrolls when it's taller than the
+  window, as Discord's does. A role at or above this account's highest,
   or one an integration manages, shows only while they hold it, greyed, as in
   Discord's. Ticking one is `PUT` or `DELETE
   /guilds/{id}/members/{user}/roles/{role}`; the box changes at once and the
-  menu stays open.
+  menu stays open. Once Discord takes it, the member's known roles change,
+  and the member list with them, without waiting for GUILD_MEMBER_UPDATE,
+  as Discord's client does.
 - Time out needs Moderate Members and outranking them, and isn't offered for
   administrators, whom Discord doesn't let anyone time out. Its dialog offers
   Discord's lengths, 60 seconds to a week, and a reason, then `PATCH
@@ -207,20 +210,20 @@ card does; nothing joins until the Join in Browser click.
 
 An invite to a server the account is in opens the server instead of
 joining, at once for a link; the dialog says so and its button opens it.
-For a new server, the button opens the invite in the browser
-(`https://discord.gg/{code}`), avoiding headless join requests that Discord
-flags for bot or captcha abuse. Once joined in the browser, the server's
-GUILD_CREATE lists it, and Yapfast opens the invite's channel once it's
-listed. An invalid or expired invite (10006, 50020) shows Discord's refusal
-in the dialog.
+For any other server, Join in Browser closes the dialog and opens the
+invite's page, `https://discord.gg/{code}`, where Discord's web app joins
+it, with its captcha and the server's form for new members. Accounts were
+signed out of every device after joining in Yapfast, so until Yapfast's
+join request matches Discord's client, Yapfast sends none. Once joined,
+the server's GUILD_CREATE lists it, and Yapfast opens the invite's channel
+when it does; a voice channel's invite opens the channel without joining
+the call. An invalid or expired invite (10006, 50020) shows Discord's
+refusal in the dialog.
 
-When the answer has `show_verification_form`, the server asks new members
-to fill in its form, such as accepting its rules, before they may talk.
-Yapfast doesn't show forms or onboarding questions yet, so the dialog says
-so and opens the channel in Discord's web app, where the form waits. A voice
-channel's invite joins the server and opens the channel without joining the
-call. Discord's client also sends `invite_instance_id` from a message's
-invite card, which Yapfast doesn't show yet, so it leaves that out.
+The in-app join stays in the code, unreached: `POST /invites/{code}` with
+`{"session_id": ...}` and Discord's `X-Context-Properties`, its captcha,
+its refusals, and a server form (`show_verification_form`) sent to
+Discord's web app (`application/join.rs`, `invite.rs`).
 
 ## Event links
 

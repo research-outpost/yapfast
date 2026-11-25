@@ -25,19 +25,26 @@ fn a_folder_marks_its_servers_read() {
         rooms: rooms.clone(),
         servers: servers.clone(),
     }));
+    // Offered, greyed in the menu as Discord's is, and marking nothing.
+    assert_eq!(
+        app.state.menu_choices("discord-folder:7"),
+        [MenuChoice::MarkRead]
+    );
     assert!(
-        app.state.menu_choices("discord-folder:7").is_empty(),
+        !app.state.folder_unread("discord-folder:7"),
         "nothing unread"
+    );
+    assert!(
+        !app.dispatch(Action::MarkRead("discord-folder:7".into()))
+            .iter()
+            .any(|effect| matches!(effect, Effect::Backend(Command::MarkRead { .. })))
     );
 
     for (id, unread) in [("general", 4), ("standup", 1)] {
         rooms.iter_mut().find(|room| room.id == id).unwrap().unread = unread;
     }
     app.apply(Event::Rooms(RoomIndex { rooms, servers }));
-    assert_eq!(
-        app.state.menu_choices("discord-folder:7"),
-        [MenuChoice::MarkRead]
-    );
+    assert!(app.state.folder_unread("discord-folder:7"));
     let marked: Vec<String> = app
         .dispatch(Action::MarkRead("discord-folder:7".into()))
         .into_iter()
@@ -47,6 +54,57 @@ fn a_folder_marks_its_servers_read() {
         })
         .collect();
     assert_eq!(marked, ["general", "standup"]);
+}
+
+#[test]
+fn a_folder_changes_its_servers_notifications_in_one_command() {
+    use chat::{DiscordCommand, Muting, NotificationChange};
+    let mut app = connected();
+    let folder = chat::ServerFolder {
+        id: "discord-folder:7".into(),
+        name: None,
+        color: None,
+    };
+    let mut servers = owned(&app.state.servers);
+    servers[0].folder = Some(folder.clone());
+    servers[0].discord = true;
+    servers.push(ChatServer {
+        id: "discord:20".into(),
+        name: "Work".into(),
+        channels: vec![],
+        folder: Some(folder),
+        ..servers[0].clone()
+    });
+    let first = servers[0].id.clone();
+    app.apply(Event::Rooms(RoomIndex {
+        rooms: owned(&app.state.rooms),
+        servers,
+    }));
+    let change = NotificationChange::Mute(Muting::Minutes(15));
+    let ask = |app: &mut Application| {
+        app.dispatch(Action::ChangeNotifications {
+            place: "discord-folder:7".into(),
+            change,
+        })
+    };
+    assert!(ask(&mut app).is_empty(), "Discord isn't connected");
+    // Without each server's settings, the menu leaves the folder's out.
+    assert!(
+        !app.menu_choices("discord-folder:7")
+            .contains(&MenuChoice::MuteFolder)
+    );
+    app.state.discord_online = true;
+    let sent: Vec<_> = ask(&mut app)
+        .into_iter()
+        .filter_map(|effect| match effect {
+            Effect::Backend(Command::Discord(DiscordCommand::FolderNotifications {
+                servers,
+                change,
+            })) => Some((servers, change)),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(sent, [(vec![first, "discord:20".to_owned()], change)]);
 }
 
 #[test]
@@ -257,6 +315,7 @@ fn someones_menu_blocks_and_unblocks_them_but_never_this_account() {
             presence: None,
             activity: None,
             activities: Default::default(),
+            style: None,
         }]
         .into(),
         blocked: if eve_blocked {
@@ -396,6 +455,7 @@ fn a_discord_dms_menu_manages_its_person_and_notifications() {
                 presence: None,
                 activity: None,
                 activities: Default::default(),
+                style: None,
             }]
             .into()
         } else {
@@ -449,6 +509,7 @@ fn a_discord_dms_menu_manages_its_person_and_notifications() {
         [
             Profile,
             Pin,
+            AddFavorite,
             Call,
             AddNote,
             EditNickname,
@@ -464,13 +525,23 @@ fn a_discord_dms_menu_manages_its_person_and_notifications() {
     // A group has no one person to manage.
     assert_eq!(
         app.state.menu_choices("discord:@me:31"),
-        [Pin, Call, Mute, LeaveGroup, CopyLink, CopyId]
+        [Pin, AddFavorite, Call, Mute, LeaveGroup, CopyLink, CopyId]
     );
     app.apply(discord_event(snapshot(false, true, true, true)));
     assert_eq!(
         app.state.menu_choices(dm),
         [
-            Profile, Pin, Call, AddNote, CloseDm, Unignore, Unblock, Unmute, CopyLink, CopyId
+            Profile,
+            Pin,
+            AddFavorite,
+            Call,
+            AddNote,
+            CloseDm,
+            Unignore,
+            Unblock,
+            Unmute,
+            CopyLink,
+            CopyId
         ],
         "no nickname nor unfriending for someone who isn't a friend, nor a request to someone blocked"
     );
@@ -608,4 +679,56 @@ fn matrix_peoples_menus_offer_a_dm_but_not_to_this_account() {
         app.dispatch(Action::MessagePerson("@bob:test".into())).as_slice(),
         [Effect::Backend(Command::StartDm { id, discord: false })] if id == "@bob:test"
     ));
+}
+
+#[test]
+fn channel_favorites_navigate_without_crossing_to_the_source_server() {
+    let mut app = connected();
+    let mut rooms = owned(&app.state.rooms);
+    rooms[0].id = "discord:@me:42".into();
+    rooms[0].network = Network::Discord;
+    rooms[1].id = "discord:10:43".into();
+    rooms[1].network = Network::Discord;
+    app.state.rooms = rooms.into_iter().map(Arc::new).collect();
+    app.state.discord_online = true;
+    app.state.channel_favorites = ["42", "43"]
+        .into_iter()
+        .map(|id| ChannelFavorite {
+            id: id.into(),
+            reference: true,
+            ..Default::default()
+        })
+        .collect();
+    app.dispatch(Action::Navigate(Navigation::Favorites));
+    assert_eq!(app.state.scoped_rooms().count(), 2);
+    app.dispatch(Action::SelectRoom("discord:10:43".into()));
+    assert_eq!(app.state.navigation, Navigation::Favorites);
+    assert_eq!(app.state.selected.as_deref(), Some("discord:10:43"));
+    // Taking it off comes near the end, as in Discord's menus.
+    assert!(app.state.menu_choices("discord:10:43").ends_with(&[
+        MenuChoice::RemoveFavorite,
+        MenuChoice::CopyLink,
+        MenuChoice::CopyId
+    ]));
+    let effects = app.dispatch(Action::FavoriteChannel {
+        room: "discord:10:43".into(),
+        favorite: false,
+    });
+    assert!(effects.iter().any(|effect| matches!(
+        effect,
+        Effect::Backend(Command::Discord(DiscordCommand::FavoriteChannel {
+            favorite: false,
+            ..
+        }))
+    )));
+    // Writes are confirmed by a snapshot, so a failed request leaves the list.
+    app.apply(Event::ChannelFavorited(Err("Offline".into())));
+    assert!(app.state.is_channel_favorite("discord:10:43"));
+    assert!(app.state.notice.as_deref().unwrap().contains("Offline"));
+    app.state.discord_online = false;
+    assert!(
+        !app.state
+            .menu_choices("discord:10:43")
+            .contains(&MenuChoice::RemoveFavorite)
+    );
 }
