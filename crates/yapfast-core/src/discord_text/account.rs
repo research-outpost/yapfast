@@ -203,7 +203,7 @@ pub(super) fn command(
         user,
         effect,
         frame,
-        badges,
+        badges: wants_badge_levels,
     }) = command
     {
         match (discord, discord::parse_room(&room)) {
@@ -250,12 +250,7 @@ pub(super) fn command(
                         .frame
                         .clone()
                         .filter(|sku| frame && discord.kept_frame(sku).is_none());
-                    // Badges off, neither their pictures nor their levels are asked for.
-                    let mut badges = if badges {
-                        profile.badges.clone()
-                    } else {
-                        Vec::new()
-                    };
+                    let mut badges = profile.badges.clone();
                     let _ = events.send(Event::Profile {
                         user: user.clone(),
                         result: Ok(framed(profile)),
@@ -278,9 +273,10 @@ pub(super) fn command(
                         }
                     };
                     let badges_task = async {
-                        if !badges.is_empty()
-                            && discord.badge_levels(&guild, &user, &mut badges).await
-                        {
+                        if !wants_badge_levels {
+                            return;
+                        }
+                        if discord.badge_levels(&guild, &user, &mut badges).await {
                             let _ = events.send(Event::BadgeLevels {
                                 user: user.clone(),
                                 badges: chat_badges(std::mem::take(&mut badges)),

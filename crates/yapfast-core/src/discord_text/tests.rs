@@ -52,7 +52,7 @@ fn answers_discord_commands_while_discord_is_away() {
             user: "2".into(),
             effect: false,
             frame: false,
-            badges: true,
+            badges: false,
         },
     ] {
         without(Command::Discord(command), why, &events);

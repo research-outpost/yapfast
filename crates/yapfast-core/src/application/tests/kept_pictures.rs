@@ -212,7 +212,7 @@ fn profile_effects_are_kept_a_few_at_a_time_and_their_pictures_go_with_the_card(
     let mut app = connected();
     // Effects play only once the profile switch lets them.
     app.dispatch(Action::SetCosmetics(Cosmetics {
-        covers: true,
+        effects: true,
         ..Cosmetics::default()
     }));
     for sku in 0..10 {

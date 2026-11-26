@@ -740,7 +740,7 @@ mod tests {
     }
 
     /// A role colour's gradient reaches the member list only while its
-    /// switch is on.
+    /// switch is on; off, the name keeps one colour and one span.
     #[test]
     fn a_role_gradient_shows_only_with_its_switch_on() {
         let mut state = AppState::default();
