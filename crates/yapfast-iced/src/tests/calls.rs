@@ -3,8 +3,9 @@
 //! with their choices beside them, the application remembered for the
 //! stream's audio, the microphone's
 //! level only while its menu shows, the dock's channel line and who it
-//! lists, a voice channel's Join, someone's volumes and menu from their
-//! tile, a camera's tile before its first frame, the corner picture's grip resizing it,
+//! lists, the call's hint closed for good, a voice channel's Join,
+//! someone's volumes and menu from their tile, a camera's tile before its
+//! first frame, the corner picture's grip resizing it,
 //! and the call's own order under its channel.
 
 use iced::{Point, Rectangle, Size};
@@ -698,6 +699,45 @@ fn the_dock_lists_whos_in_the_call_and_opens_their_menu() {
     let _ = crate::call::update(&mut app, Event::Leave);
     let _ = app.sync();
     assert!(!super::present(&app, "Bobbington"), "gone with the call");
+}
+
+#[test]
+fn the_calls_stays_connected_hint_closes_for_good() {
+    let (mut app, folder, _) = in_call();
+    super::change(&mut app, |state| {
+        let mut bob = state.voice.participants[0].clone();
+        bob.id = "preview-bob".into();
+        bob.person = "bob".into();
+        bob.user = "Bob".into();
+        bob.local = false;
+        state.voice.participants.push(bob);
+    });
+    let hint = "Voice stays connected while you browse other conversations.";
+    assert_eq!(crate::call::stage::voice_description(&app), hint);
+    assert!(shows(&app, hint));
+    // Its close button sits just after it.
+    interact(&mut app, |ui| {
+        let words = ui.find(hint).expect("the hint");
+        let bounds = words.visible_bounds().expect("in view");
+        ui.point_at(Point::new(
+            bounds.x + bounds.width + 14.0,
+            bounds.center_y(),
+        ));
+        ui.simulate(iced_test::simulator::click());
+    });
+    assert!(app.layout.hide_voice_hint);
+    assert!(!super::present(&app, hint));
+    assert!(
+        crate::layout::Layout::read(folder.path()).hide_voice_hint,
+        "kept for the next start"
+    );
+    // The call's other lines still show.
+    super::change(&mut app, |state| {
+        state.voice.participants.truncate(1);
+    });
+    let alone = crate::call::stage::voice_description(&app);
+    assert!(alone.starts_with("You're here alone."), "{alone}");
+    assert!(shows(&app, &alone));
 }
 
 #[test]
