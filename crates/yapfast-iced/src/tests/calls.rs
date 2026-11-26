@@ -1,12 +1,20 @@
 //! The call: the dock's noise toggle, the device menus' volumes and a
 //! device gone away, the share menu in a short window, its settings' rows
 //! with their choices beside them, the application remembered for the
+<<<<<<< HEAD
 //! stream's audio, the microphone's
 //! level only while its menu shows, the dock's channel line and who it
 //! lists, the call's hint closed for good, a voice channel's Join,
 //! someone's volumes and menu from their tile, a camera's tile before its
 //! first frame, the corner picture's grip resizing it,
 //! and the call's own order under its channel.
+=======
+//! stream's audio, the microphone's level only while its menu shows, the
+//! dock's channel line, the call's hint closed for good, a voice channel's
+//! Join, someone's volumes and menu from their tile, a camera's tile
+//! before its first frame, the corner picture's grip resizing it, and the
+//! call's own order under its channel.
+>>>>>>> 733e2f55 (style(tests): rewrap the calls tests' summary to the line width)
 
 use iced::{Point, Rectangle, Size};
 use yapfast_core::{
