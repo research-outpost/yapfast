@@ -8,7 +8,7 @@ use yapfast_discord::{
     ready::PRIVATE,
     service::{Discord, Live, Snapshot, Status, VoiceServer},
     stream::{self, StreamServer},
-    voice::{Call as DiscordCall, MOVE_GRACE, live_microphone},
+    voice::{Call as DiscordCall, live_microphone},
 };
 
 use crate::{
@@ -485,14 +485,6 @@ pub(crate) async fn call(
         let mut ticks = tokio::time::interval(Duration::from_millis(150));
         ticks.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
         let mut volumes = crate::volume::changes();
-        // The voice connection dropped, and the call ends when `lost` comes
-        // unless Discord says it moved the call meanwhile.
-        let mut dropped = false;
-        // Another session of this account holds the guild's voice state,
-        // which a move does too until Discord names the voice server.
-        let mut claimed = false;
-        let lost = tokio::time::sleep(MOVE_GRACE);
-        tokio::pin!(lost);
         loop {
             let talking = capture.as_ref().is_some_and(Capture::talking);
             let participants = discord_participants(
@@ -966,9 +958,9 @@ pub(crate) async fn call(
                         break;
                     }
                     Live::VoiceElsewhere { .. } => {
+                        // A moderator's move gives this account a new voice
+                        // session and names the call's server next.
                         tracing::info!("another session holds this call; waiting for a move");
-                        claimed = true;
-                        lost.as_mut().reset(tokio::time::Instant::now() + MOVE_GRACE);
                     }
                     // Who watches this account's stream, or the one it watches.
                     Live::StreamUpdated { stream_key, viewers, .. } => {
@@ -1014,13 +1006,11 @@ pub(crate) async fn call(
                     // Discord moved the call to another voice server: the
                     // call carries on there.
                     Live::VoiceMoved { guild: moved, server: next } if moved == guild => {
-                        if dropped || next.endpoint != server.endpoint || next.token != server.token {
+                        if next.endpoint != server.endpoint || next.token != server.token || next.session_id != server.session_id {
                             tracing::info!("Discord moved the call to another voice server");
                             match tokio::time::timeout(MOVE_TIMEOUT, call.move_to(&next, &channel)).await {
                                 Ok(Ok(())) => {
                                     server = next;
-                                    dropped = false;
-                                    claimed = false;
                                 }
                                 Ok(Err(error)) => {
                                     tracing::warn!(error = format!("{error:#}"), "could not follow the call to its new voice server");
@@ -1056,16 +1046,7 @@ pub(crate) async fn call(
                     _ => {}
                 },
                 Some(reason) = endings.recv() => {
-                    // Discord ends the connection when it moves the call,
-                    // perhaps before it says where to.
                     tracing::warn!(%reason, "Discord voice disconnected");
-                    dropped = true;
-                    lost.as_mut().reset(tokio::time::Instant::now() + MOVE_GRACE);
-                }
-                () = &mut lost, if dropped || claimed => {
-                    if claimed {
-                        bail!("Another client took the call over. Join again here to take it back.");
-                    }
                     bail!("Discord voice disconnected. Join again to reconnect.");
                 }
                 changed = discord_states.changed() => {
