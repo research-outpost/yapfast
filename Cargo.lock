@@ -10792,7 +10792,7 @@ checksum = "40de123dbb523ebcc00d61ec01840ad192578afc378d859f3429caa38308fad5"
 
 [[package]]
 name = "yapfast"
-version = "0.5.0-fork.15"
+version = "0.5.0-fork.16"
 dependencies = [
  "anyhow",
  "arboard",
