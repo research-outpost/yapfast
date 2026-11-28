@@ -1476,9 +1476,9 @@ fn preferences_are_kept_across_a_restart() {
         });
     } else {
         assert!(!shows(&app, "Flash the taskbar"));
-        let _ = app.update(crate::settings::pref_message(
-            crate::settings::Pref::FlashTaskbar(false),
-        ));
+        let _ = app.update(crate::app::settings(crate::settings::Event::Pref(
+            crate::settings::pages::Pref::FlashTaskbar(false),
+        )));
     }
     open(&mut app, Section::Advanced);
     interact(&mut app, |ui| {

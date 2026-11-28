@@ -20,7 +20,7 @@ mod appearance;
 mod desktop_icons;
 mod font;
 pub mod keybinds;
-mod pages;
+pub(crate) mod pages;
 pub(crate) mod theme_creator;
 mod theme_keys;
 pub(crate) mod theme_marketplace;
